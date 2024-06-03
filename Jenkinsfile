@@ -3,15 +3,17 @@ pipeline {
 
     environment {
         SONARQUBE_ENV = 'SonarQubeServer'
-        SCANNER_HOME = '/opt/sonar-scanner'
+        SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+        DOCKER_HUB_CREDS = credentials('docker-hub-credentials')
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
+        DOCKER_COMPOSE = '/usr/local/bin/docker-compose'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ogeeDeveloper/Jenkins_Upgradev3.git', branch: 'master' // or 'main' depending on your repository's default branch
+                git url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', branch: 'master'
             }
         }
 
@@ -43,8 +45,17 @@ pipeline {
 
         stage('OWASP ZAP Scan') {
             steps {
-                sh 'echo "Running OWASP ZAP scan"'
-                // Add your OWASP ZAP scan commands here
+                sh '''
+                docker run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
+                sleep 15
+                docker exec zap zap-cli status -t 120
+                docker exec zap zap-cli open-url http://your-application-url
+                docker exec zap zap-cli spider http://your-application-url
+                docker exec zap zap-cli active-scan --scanners all http://your-application-url
+                docker exec zap zap-cli report -o /zap/wrk/zap_report.html -f html
+                docker stop zap
+                docker rm zap
+                '''
             }
         }
 
@@ -62,7 +73,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh 'docker-compose up -d'
+                sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d" // Use docker-compose from the repository
             }
         }
     }
@@ -70,7 +81,7 @@ pipeline {
     post {
         always {
             echo 'Cleaning up...'
-            sh 'docker-compose down'
+            sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
         }
         success {
             emailext subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",

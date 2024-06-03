@@ -1,10 +1,10 @@
 pipeline {
-    agent none  // No default agent; specify agents at stage level
+    agent any  // Use any available agent
 
     environment {
         VERSION = '0.1.0'
         RELEASE_VERSION = 'R.2'
-        SONAR_HOST_URL = 'http://http://174.138.63.154/:9000'
+        SONAR_HOST_URL = 'http://http://174.138.63.154/:9000'  // Using Docker service name as hostname
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
@@ -13,7 +13,6 @@ pipeline {
 
     stages {
         stage('Prepare') {
-            agent { label 'docker-capable' }
             steps {
                 checkout scm
                 echo "Checkout complete."
@@ -21,7 +20,6 @@ pipeline {
         }
 
         stage('Audit Tools') {
-            agent { label 'docker-capable' }
             steps {
                 dir('java-tomcat-sample') {
                     sh 'java -version'
@@ -34,7 +32,6 @@ pipeline {
         }
 
         stage('Unit Test') {
-            agent { label 'docker-capable' }
             steps {
                 dir('java-tomcat-sample') {
                     sh 'mvn test -X'  // Enable Maven debug output
@@ -44,13 +41,12 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            agent { label 'docker-capable' }
             steps {
                 dir('java-tomcat-sample') {
                     script {
-                        withSonarQubeEnv('SonarQube_Server') {
+                        withSonarQubeEnv('SonarQubeServer') {
                             // Using 'mvn -X' for verbose output
-                            sh 'mvn clean verify sonar:sonar -X'
+                            sh 'mvn clean verify sonar:sonar'
                             echo "SonarQube analysis completed."
                         }
                     }
@@ -59,7 +55,6 @@ pipeline {
         }
 
         stage('Build and Package') {
-            agent { label 'docker-capable' }
             steps {
                 dir('java-tomcat-sample') {
                     sh 'mvn clean package'  // Enable Maven debug output
@@ -69,7 +64,6 @@ pipeline {
         }
 
         stage('OWASP ZAP Scan') {
-            agent { label 'docker-capable' }
             steps {
                 sh '''
                 docker run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
@@ -87,7 +81,6 @@ pipeline {
         }
 
         stage('IaC Validation') {
-            agent { label 'docker-capable' }
             steps {
                 sh '''
                 cd terraform
@@ -99,7 +92,6 @@ pipeline {
         }
 
         stage('Terraform Apply') {
-            agent { label 'docker-capable' }
             steps {
                 withCredentials([string(credentialsId: 'digitalocean_token', variable: 'DO_TOKEN'),
                                  string(credentialsId: 'digitalocean_region', variable: 'DO_REGION')]) {
@@ -113,7 +105,6 @@ pipeline {
         }
 
         stage('Deploy') {
-            agent { label 'docker-capable' }
             steps {
                 sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d" // Use docker-compose from the repository
                 echo "Deployment completed."
@@ -123,11 +114,9 @@ pipeline {
 
     post {
         always {
-            node('docker-capable') {  // Use a node block to specify the context
-                echo 'Cleaning up workspace'
-                sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
-                deleteDir()
-            }
+            echo 'Cleaning up workspace'
+            sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
+            deleteDir()
         }
         success {
             emailext subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",

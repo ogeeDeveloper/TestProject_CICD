@@ -5,6 +5,7 @@ pipeline {
         VERSION = '0.1.0'
         RELEASE_VERSION = 'R.2'
         SONAR_HOST_URL = 'http://http://174.138.63.154/:9000'  // Using Docker service name as hostname
+        // Ensure the following paths are correct for your environment
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
@@ -46,7 +47,7 @@ pipeline {
                     script {
                         withSonarQubeEnv('SonarQubeServer') {
                             // Using 'mvn -X' for verbose output
-                            sh 'mvn clean verify sonar:sonar'
+                            sh 'mvn clean verify sonar:sonar -X'
                             echo "SonarQube analysis completed."
                         }
                     }

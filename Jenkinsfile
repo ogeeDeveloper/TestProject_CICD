@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         SONARQUBE_ENV = 'SonarQubeServer'
-        SCANNER_HOME = '/opt/sonar-scanner'
+        SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
     }
@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ogeeDeveloper/Jenkins_Upgradev3.git', branch: 'master' // or 'main' depending on your repository's default branch
+                git url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', branch: 'master'
             }
         }
 

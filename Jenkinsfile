@@ -1,49 +1,75 @@
 pipeline {
-    agent any
+    agent none  // No default agent; specify agents at stage level
 
     environment {
-        SONARQUBE_ENV = 'SonarQubeServer'
+        VERSION = '0.1.0'
+        RELEASE_VERSION = 'R.2'
+        SONAR_HOST_URL = 'http://http://174.138.63.154/:9000'
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-        DOCKER_HUB_CREDS = credentials('docker-hub-credentials')
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
         DOCKER_COMPOSE = '/usr/local/bin/docker-compose' // Full path to docker-compose
     }
 
     stages {
-        stage('Checkout') {
+        stage('Prepare') {
+            agent { label 'docker-capable' }
             steps {
-                git url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', branch: 'master'
+                checkout scm
+                echo "Checkout complete."
             }
         }
 
-        stage('Build') {
+        stage('Audit Tools') {
+            agent { label 'docker-capable' }
             steps {
-                withMaven(maven: 'Maven') {
-                    sh 'mvn clean install'
+                dir('java-tomcat-sample') {
+                    sh 'java -version'
+                    sh 'mvn -version'
+                    sh 'printenv'
+                    sh 'ls -l'
+                    echo "Audit tools completed successfully."
+                }
+            }
+        }
+
+        stage('Unit Test') {
+            agent { label 'docker-capable' }
+            steps {
+                dir('java-tomcat-sample') {
+                    sh 'mvn test -X'  // Enable Maven debug output
+                    echo "Unit tests completed."
                 }
             }
         }
 
         stage('SonarQube Analysis') {
+            agent { label 'docker-capable' }
             steps {
-                withSonarQubeEnv('SonarQubeServer') {
-                    sh "${SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample -Dsonar.sources=src -Dsonar.host.url=${SONARQUBE_ENV} -Dsonar.login=${SONARQUBE_LOGIN}"
+                dir('java-tomcat-sample') {
+                    script {
+                        withSonarQubeEnv('SonarQube_Server') {
+                            // Using 'mvn -X' for verbose output
+                            sh 'mvn clean verify sonar:sonar -X'
+                            echo "SonarQube analysis completed."
+                        }
+                    }
                 }
             }
         }
 
-        stage('IaC Validation') {
+        stage('Build and Package') {
+            agent { label 'docker-capable' }
             steps {
-                sh '''
-                cd terraform
-                terraform init
-                terraform validate
-                '''
+                dir('java-tomcat-sample') {
+                    sh 'mvn clean package'  // Enable Maven debug output
+                    echo "Build and packaging completed."
+                }
             }
         }
 
         stage('OWASP ZAP Scan') {
+            agent { label 'docker-capable' }
             steps {
                 sh '''
                 docker run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
@@ -56,10 +82,24 @@ pipeline {
                 docker stop zap
                 docker rm zap
                 '''
+                echo "OWASP ZAP scan completed."
+            }
+        }
+
+        stage('IaC Validation') {
+            agent { label 'docker-capable' }
+            steps {
+                sh '''
+                cd terraform
+                terraform init
+                terraform validate
+                '''
+                echo "Terraform validation completed."
             }
         }
 
         stage('Terraform Apply') {
+            agent { label 'docker-capable' }
             steps {
                 withCredentials([string(credentialsId: 'digitalocean_token', variable: 'DO_TOKEN'),
                                  string(credentialsId: 'digitalocean_region', variable: 'DO_REGION')]) {
@@ -67,21 +107,27 @@ pipeline {
                     cd terraform
                     terraform apply -var "digitalocean_token=${DO_TOKEN}" -var "region=${DO_REGION}" -auto-approve
                     '''
+                    echo "Terraform apply completed."
                 }
             }
         }
 
         stage('Deploy') {
+            agent { label 'docker-capable' }
             steps {
                 sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d" // Use docker-compose from the repository
+                echo "Deployment completed."
             }
         }
     }
 
     post {
         always {
-            echo 'Cleaning up...'
-            sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
+            node('docker-capable') {  // Use a node block to specify the context
+                echo 'Cleaning up workspace'
+                sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
+                deleteDir()
+            }
         }
         success {
             emailext subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",

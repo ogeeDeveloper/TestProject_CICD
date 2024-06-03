@@ -4,7 +4,6 @@ pipeline {
     environment {
         SONARQUBE_ENV = 'SonarQubeServer'
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-        DOCKER_HUB_CREDS = credentials('docker-hub-credentials')
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
         DOCKER_COMPOSE = '/usr/local/bin/docker-compose'

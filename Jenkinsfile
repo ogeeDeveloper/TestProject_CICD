@@ -4,12 +4,15 @@ pipeline {
     environment {
         VERSION = '0.1.0'
         RELEASE_VERSION = 'R.2'
-        SONAR_HOST_URL = 'http://http://174.138.63.154/:9000'  // Using Docker service name as hostname
-        // Ensure the following paths are correct for your environment
+        SONAR_HOST_URL = 'http://174.138.63.154:9000'
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
         DOCKER_COMPOSE = '/usr/local/bin/docker-compose' // Full path to docker-compose
+    }
+
+    tools {
+        git 'Default'  // Ensure 'Default' matches the name of your Git installation
     }
 
     stages {
@@ -45,7 +48,7 @@ pipeline {
             steps {
                 dir('java-tomcat-sample') {
                     script {
-                        withSonarQubeEnv('SonarQubeServer') {
+                        withSonarQubeEnv('SonarQubeScanner') {
                             // Using 'mvn -X' for verbose output
                             sh 'mvn clean verify sonar:sonar -X'
                             echo "SonarQube analysis completed."
@@ -107,7 +110,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d" // Use docker-compose from the repository
+                sh "${env.DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d" // Use docker-compose from the repository
                 echo "Deployment completed."
             }
         }
@@ -116,7 +119,11 @@ pipeline {
     post {
         always {
             echo 'Cleaning up workspace'
-            sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
+            script {
+                if (env.DOCKER_COMPOSE) {
+                    sh "${env.DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
+                }
+            }
             deleteDir()
         }
         success {

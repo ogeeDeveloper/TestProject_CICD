@@ -70,7 +70,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d"
+                sh "${DOCKER_COMPOSE} -f \"${WORKSPACE}/docker-compose.yml\" up -d"
                 echo "Deployment completed."
             }
         }
@@ -124,7 +124,7 @@ pipeline {
             echo 'Cleaning up workspace'
             script {
                 if (fileExists("${WORKSPACE}/docker-compose.yml")) {
-                    sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down"
+                    sh "${DOCKER_COMPOSE} -f \"${WORKSPACE}/docker-compose.yml\" down"
                 }
             }
             cleanWs(patterns: [[pattern: 'target/**/*', type: 'INCLUDE']]) 

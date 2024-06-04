@@ -8,7 +8,7 @@ pipeline {
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
-        DOCKER_COMPOSE ='/usr/local/bin/docker-compose'
+        DOCKER_COMPOSE = '/usr/local/bin/docker-compose'
         DOCKER = '/usr/bin/docker'
     }
 
@@ -127,7 +127,8 @@ pipeline {
                     sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down"
                 }
             }
-            deleteDir() // Safe to delete Jenkins workspace directory
+            // Instead of deleting everything, be more selective about cleanup
+            cleanWs(patterns: [[pattern: 'target/**/*', type: 'INCLUDE']]) 
         }
         success {
             echo "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' was successful. \nCheck it out at ${env.BUILD_URL}"

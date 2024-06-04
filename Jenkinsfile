@@ -72,7 +72,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    ${DOCKER} run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
+                    ${DOCKER} run -d --name zap -u zap -p 8081:8080 -v ${WORKSPACE}:/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
                     sleep 15
                     ${DOCKER} exec zap zap-cli status -t 120
                     ${DOCKER} exec zap zap-cli open-url http://your-application-url

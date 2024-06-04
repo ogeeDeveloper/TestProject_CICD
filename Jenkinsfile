@@ -51,7 +51,7 @@ pipeline {
                 dir('java-tomcat-sample') {
                     script {
                         withSonarQubeEnv('SonarQubeScanner') {
-                            sh 'mvn clean verify sonar:sonar'
+                            sh 'mvn clean verify sonar:sonar -Dsonar.ws.timeout=600'
                             echo "SonarQube analysis completed."
                         }
                     }
@@ -130,14 +130,10 @@ pipeline {
             deleteDir() // Safe to delete Jenkins workspace directory
         }
         success {
-            emailext subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                    body: "Great news! The job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' was successful. \nCheck it out at ${env.BUILD_URL}",
-                    to: 'your_email@example.com'
+            echo "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' was successful. \nCheck it out at ${env.BUILD_URL}"
         }
         failure {
-            emailext subject: "FAILURE: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                    body: "Unfortunately, the job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' failed. \nCheck it out at ${env.BUILD_URL}",
-                    to: 'your_email@example.com'
+            echo "FAILURE: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' failed. \nCheck it out at ${env.BUILD_URL}"
         }
     }
 }

@@ -8,10 +8,11 @@ pipeline {
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
-        DOCKER_COMPOSE = '/usr/local/bin/docker-compose' // Full path to docker-compose
+        DOCKER_COMPOSE = '/usr/local/bin/docker-compose' // Update this path if necessary
     }
 
     tools {
+        maven 'Maven'  // Use the name you provided for Maven in Global Tool Configuration
         git 'Default'  // Ensure 'Default' matches the name of your Git installation
     }
 

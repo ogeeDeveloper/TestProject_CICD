@@ -10,7 +10,14 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Prepare') {
+            steps {
+                checkout scm
+                echo "Checkout complete."
+            }
+        }
+
+        stage('Audit Tools') {
             steps {
                 // Clone the repository from GitHub
                 git url: env.GIT_REPO

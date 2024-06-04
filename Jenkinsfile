@@ -39,7 +39,7 @@ pipeline {
         stage('Unit Test') {
             steps {
                 dir('java-tomcat-sample') {
-                    sh 'mvn test -X'  // Enable Maven debug output
+                    sh 'mvn test'  // Enable Maven debug output
                     echo "Unit tests completed."
                 }
             }
@@ -51,7 +51,7 @@ pipeline {
                     script {
                         withSonarQubeEnv('SonarQubeScanner') {
                             // Using 'mvn -X' for verbose output
-                            sh 'mvn clean verify sonar:sonar -X'
+                            sh 'mvn clean verify sonar:sonar'
                             echo "SonarQube analysis completed."
                         }
                     }

@@ -2,95 +2,113 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE_ENV = 'SonarQubeServer'
-        SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-        DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
-        DIGITALOCEAN_REGION = credentials('digitalocean_region')
-        DOCKER_COMPOSE = '/usr/local/bin/docker-compose'
+        GIT_REPO = 'https://github.com/ogeeDeveloper/Jenkins_Upgradev3.git'
+        MAVEN_PROJECT_DIR = 'java-tomcat-sample'
+        TERRAFORM_DIR = 'terraform'
+        ANSIBLE_PLAYBOOK = 'deploy.yml'
+        ANSIBLE_INVENTORY = 'inventory.ini'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', branch: 'master'
+                // Clone the repository from GitHub
+                git url: env.GIT_REPO
             }
         }
-
         stage('Build') {
             steps {
-                withMaven(maven: 'Maven') {
+                // Navigate to the Maven project directory and build the project
+                dir(env.MAVEN_PROJECT_DIR) {
                     sh 'mvn clean install'
                 }
             }
         }
-
-        stage('SonarQube Analysis') {
+        stage('Static Code Analysis') {
             steps {
-                withSonarQubeEnv('SonarQubeServer') {
-                    sh "${SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample -Dsonar.sources=src -Dsonar.host.url=${SONARQUBE_ENV} -Dsonar.login=${SONARQUBE_LOGIN}"
+                script {
+                    // Perform SonarQube analysis
+                    withSonarQubeEnv('SonarQube') {
+                        dir(env.MAVEN_PROJECT_DIR) {
+                            sh 'mvn sonar:sonar'
+                        }
+                    }
+                    // Perform Checkmarx analysis
+                    checkmarxScan failBuildOnError: true
                 }
             }
         }
-
-        stage('IaC Validation') {
+        stage('Infrastructure Provisioning') {
             steps {
-                sh '''
-                cd terraform
-                terraform init
-                terraform validate
-                '''
-            }
-        }
-
-        stage('OWASP ZAP Scan') {
-            steps {
-                sh '''
-                docker run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
-                sleep 15
-                docker exec zap zap-cli status -t 120
-                docker exec zap zap-cli open-url http://your-application-url
-                docker exec zap zap-cli spider http://your-application-url
-                docker exec zap zap-cli active-scan --scanners all http://your-application-url
-                docker exec zap zap-cli report -o /zap/wrk/zap_report.html -f html
-                docker stop zap
-                docker rm zap
-                '''
-            }
-        }
-
-        stage('Terraform Apply') {
-            steps {
-                withCredentials([string(credentialsId: 'digitalocean_token', variable: 'DO_TOKEN'),
-                                 string(credentialsId: 'digitalocean_region', variable: 'DO_REGION')]) {
-                    sh '''
-                    cd terraform
-                    terraform apply -var "digitalocean_token=${DO_TOKEN}" -var "region=${DO_REGION}" -auto-approve
-                    '''
+                script {
+                    // Navigate to the Terraform directory and provision infrastructure
+                    dir(env.TERRAFORM_DIR) {
+                        sh 'terraform init'
+                        sh 'terraform apply -auto-approve'
+                    }
                 }
             }
         }
-
-        stage('Deploy') {
+        stage('Deploy Application') {
             steps {
-                sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d" // Use docker-compose from the repository
+                script {
+                    // Retrieve the IP address of the provisioned server from Terraform
+                    def server_ip = sh(script: "cd ${env.TERRAFORM_DIR} && terraform output -raw app_server_ip", returnStdout: true).trim()
+                    
+                    // Write the dynamic inventory to a file
+                    writeFile file: 'inventory.ini', text: "[app_servers]\n${server_ip} ansible_user=deployer ansible_ssh_private_key_file=/path/to/your/private/key\n[all:vars]\nansible_python_interpreter=/usr/bin/python3"
+                    
+                    // Use Ansible to deploy the application to the server
+                    ansiblePlaybook playbook: env.ANSIBLE_PLAYBOOK, inventory: 'inventory.ini', extraVars: [
+                        "ansible_user": "deployer",
+                        "ansible_password": "your_ansible_password",  // replace with your actual password if using password instead of key
+                        "server_ip": server_ip,
+                        "workspace": "${env.WORKSPACE}"
+                    ]
+                    
+                    // Save the application URL for later stages
+                    env.APP_URL = "http://${server_ip}:8080"  // Adjust the port if necessary
+                }
+            }
+        }
+        stage('DAST with OWASP ZAP') {
+            steps {
+                script {
+                    // Perform dynamic application security testing with OWASP ZAP
+                    zapAttack target: env.APP_URL
+                }
+            }
+        }
+        stage('Deploy to Production') {
+            steps {
+                script {
+                    // Deploy the application to the production environment using Terraform and Ansible
+                    dir(env.TERRAFORM_DIR) {
+                        sh 'terraform apply -var="env=prod" -auto-approve'
+                    }
+                    ansiblePlaybook playbook: 'deploy_prod.yml', inventory: 'inventory.ini', extraVars: [
+                        "ansible_user": "deployer",
+                        "ansible_password": "your_ansible_password",  // replace with your actual password if using password instead of key
+                        "server_ip": server_ip,
+                        "workspace": "${env.WORKSPACE}"
+                    ]
+                }
             }
         }
     }
-
     post {
         always {
-            echo 'Cleaning up...'
-            sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
+            // Archive test results and build artifacts
+            junit 'target/surefire-reports/*.xml'
+            archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
         }
         success {
-            emailext subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                    body: "Great news! The job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' was successful. \nCheck it out at ${env.BUILD_URL}",
-                    to: 'your_email@example.com'
+            // Send email notification on successful build
+            emailext to: 'team@example.com', subject: 'Build Successful', body: 'The build was successful!'
         }
         failure {
-            emailext subject: "FAILURE: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                    body: "Unfortunately, the job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' failed. \nCheck it out at ${env.BUILD_URL}",
-                    to: 'your_email@example.com'
+            // Send email notification on failed build
+            emailext to: 'team@example.com', subject: 'Build Failed', body: 'The build failed. Please check Jenkins for details.'
         }
     }
 }

@@ -75,9 +75,9 @@ pipeline {
                     ${DOCKER} run -d --name zap -u zap -p 8081:8080 -v ${WORKSPACE}:/zap/wrk/:rw owasp/zap2docker-stable:latest zap.sh -daemon -port 8080 -config api.disablekey=true
                     sleep 15
                     ${DOCKER} exec zap zap-cli status -t 120
-                    ${DOCKER} exec zap zap-cli open-url http://your-application-url
-                    ${DOCKER} exec zap zap-cli spider http://your-application-url
-                    ${DOCKER} exec zap zap-cli active-scan --scanners all http://your-application-url
+                    ${DOCKER} exec zap zap-cli open-url http://174.138.63.154:8080
+                    ${DOCKER} exec zap zap-cli spider http://174.138.63.154:8080
+                    ${DOCKER} exec zap zap-cli active-scan --scanners all http://174.138.63.154:8080
                     ${DOCKER} exec zap zap-cli report -o /zap/wrk/zap_report.html -f html
                     ${DOCKER} stop zap
                     ${DOCKER} rm zap

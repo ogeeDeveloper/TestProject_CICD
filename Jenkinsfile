@@ -8,7 +8,8 @@ pipeline {
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
-        DOCKER_COMPOSE = '/usr/local/bin/docker-compose' // Update this path if necessary
+        DOCKER_COMPOSE = '/usr/local/bin/docker-compose' // Path to docker-compose
+        DOCKER_PATH = '/usr/bin/docker' // Path to docker
     }
 
     tools {
@@ -39,7 +40,7 @@ pipeline {
         stage('Unit Test') {
             steps {
                 dir('java-tomcat-sample') {
-                    sh 'mvn test'  // Enable Maven debug output
+                    sh 'mvn test'  // Removed -X to reduce log verbosity
                     echo "Unit tests completed."
                 }
             }
@@ -50,7 +51,6 @@ pipeline {
                 dir('java-tomcat-sample') {
                     script {
                         withSonarQubeEnv('SonarQubeScanner') {
-                            // Using 'mvn -X' for verbose output
                             sh 'mvn clean verify sonar:sonar'
                             echo "SonarQube analysis completed."
                         }
@@ -62,7 +62,7 @@ pipeline {
         stage('Build and Package') {
             steps {
                 dir('java-tomcat-sample') {
-                    sh 'mvn clean package'  // Enable Maven debug output
+                    sh 'mvn clean package'
                     echo "Build and packaging completed."
                 }
             }
@@ -70,17 +70,19 @@ pipeline {
 
         stage('OWASP ZAP Scan') {
             steps {
-                sh '''
-                docker run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
-                sleep 15
-                docker exec zap zap-cli status -t 120
-                docker exec zap zap-cli open-url http://your-application-url
-                docker exec zap zap-cli spider http://your-application-url
-                docker exec zap zap-cli active-scan --scanners all http://your-application-url
-                docker exec zap zap-cli report -o /zap/wrk/zap_report.html -f html
-                docker stop zap
-                docker rm zap
-                '''
+                script {
+                    sh '''
+                    ${DOCKER_PATH} run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
+                    sleep 15
+                    ${DOCKER_PATH} exec zap zap-cli status -t 120
+                    ${DOCKER_PATH} exec zap zap-cli open-url http://your-application-url
+                    ${DOCKER_PATH} exec zap zap-cli spider http://your-application-url
+                    ${DOCKER_PATH} exec zap zap-cli active-scan --scanners all http://your-application-url
+                    ${DOCKER_PATH} exec zap zap-cli report -o /zap/wrk/zap_report.html -f html
+                    ${DOCKER_PATH} stop zap
+                    ${DOCKER_PATH} rm zap
+                    '''
+                }
                 echo "OWASP ZAP scan completed."
             }
         }
@@ -111,7 +113,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh "${env.DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d" // Use docker-compose from the repository
+                sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml up -d"
                 echo "Deployment completed."
             }
         }
@@ -122,13 +124,10 @@ pipeline {
             echo 'Cleaning up workspace'
             script {
                 if (env.DOCKER_COMPOSE) {
-                    sh "${env.DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
+                    sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down"
                 }
             }
-            // Optionally clean specific directories instead of deleteDir()
-            dir("${env.WORKSPACE}") {
-                deleteDir() // Safe to delete Jenkins workspace directory
-            }
+            deleteDir() // Safe to delete Jenkins workspace directory
         }
         success {
             emailext subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",

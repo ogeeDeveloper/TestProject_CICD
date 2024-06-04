@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        GIT_REPO = 'https://github.com/ogeeDeveloper/Jenkins_Upgradev3.git'
+        GIT_REPO = 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
         MAVEN_PROJECT_DIR = 'java-tomcat-sample'
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_PLAYBOOK = 'deploy.yml'
@@ -10,14 +10,7 @@ pipeline {
     }
 
     stages {
-        stage('Prepare') {
-            steps {
-                checkout scm
-                echo "Checkout complete."
-            }
-        }
-
-        stage('Audit Tools') {
+        stage('Checkout') {
             steps {
                 // Clone the repository from GitHub
                 git url: env.GIT_REPO

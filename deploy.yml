@@ -1,0 +1,23 @@
+- hosts: app_servers
+  become: yes
+  vars:
+    ansible_user: "deployer"
+    server_ip: "{{ server_ip }}"
+  tasks:
+    - name: Ensure Java is installed
+      apt:
+        name: openjdk-11-jdk
+        state: present
+      become: yes
+
+    - name: Copy application jar to server
+      copy:
+        src: "{{ workspace }}/java-tomcat-sample/target/application.jar"
+        dest: /home/{{ ansible_user }}/application.jar
+      become: yes
+
+    - name: Run the application
+      shell: java -jar /home/{{ ansible_user }}/application.jar &
+      args:
+        chdir: /home/{{ ansible_user }}
+      become: yes

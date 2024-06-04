@@ -123,7 +123,7 @@ pipeline {
         always {
             echo 'Cleaning up workspace'
             script {
-                if (env.DOCKER_COMPOSE) {
+                if (fileExists("${WORKSPACE}/docker-compose.yml")) {
                     sh "${DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down"
                 }
             }

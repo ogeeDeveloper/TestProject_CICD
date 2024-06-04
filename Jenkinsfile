@@ -125,7 +125,10 @@ pipeline {
                     sh "${env.DOCKER_COMPOSE} -f ${WORKSPACE}/docker-compose.yml down" // Use docker-compose from the repository
                 }
             }
-            deleteDir()
+            // Optionally clean specific directories instead of deleteDir()
+            dir("${env.WORKSPACE}") {
+                deleteDir() // Safe to delete Jenkins workspace directory
+            }
         }
         success {
             emailext subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",

@@ -1,5 +1,5 @@
 pipeline {
-    agent any  // Use any available agent
+    agent any
 
     environment {
         VERSION = '0.1.0'
@@ -8,13 +8,13 @@ pipeline {
         SCANNER_HOME = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
         DIGITALOCEAN_TOKEN = credentials('digitalocean_token')
         DIGITALOCEAN_REGION = credentials('digitalocean_region')
-        DOCKER_COMPOSE = '/usr/local/bin/docker-compose' // Path to docker-compose
-        DOCKER_PATH = '/usr/bin/docker' // Path to docker
+        DOCKER_COMPOSE = '/usr/local/bin/docker-compose'
+        DOCKER = '/usr/bin/docker'
     }
 
     tools {
-        maven 'Maven'  // Use the name you provided for Maven in Global Tool Configuration
-        git 'Default'  // Ensure 'Default' matches the name of your Git installation
+        maven 'Maven'
+        git 'Default'
     }
 
     stages {
@@ -40,7 +40,7 @@ pipeline {
         stage('Unit Test') {
             steps {
                 dir('java-tomcat-sample') {
-                    sh 'mvn test'  // Removed -X to reduce log verbosity
+                    sh 'mvn test'
                     echo "Unit tests completed."
                 }
             }
@@ -72,15 +72,15 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    ${DOCKER_PATH} run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
+                    ${DOCKER} run -d --name zap -u zap -p 8081:8080 -v $(pwd):/zap/wrk/:rw owasp/zap2docker-stable zap.sh -daemon -port 8080 -config api.disablekey=true
                     sleep 15
-                    ${DOCKER_PATH} exec zap zap-cli status -t 120
-                    ${DOCKER_PATH} exec zap zap-cli open-url http://your-application-url
-                    ${DOCKER_PATH} exec zap zap-cli spider http://your-application-url
-                    ${DOCKER_PATH} exec zap zap-cli active-scan --scanners all http://your-application-url
-                    ${DOCKER_PATH} exec zap zap-cli report -o /zap/wrk/zap_report.html -f html
-                    ${DOCKER_PATH} stop zap
-                    ${DOCKER_PATH} rm zap
+                    ${DOCKER} exec zap zap-cli status -t 120
+                    ${DOCKER} exec zap zap-cli open-url http://your-application-url
+                    ${DOCKER} exec zap zap-cli spider http://your-application-url
+                    ${DOCKER} exec zap zap-cli active-scan --scanners all http://your-application-url
+                    ${DOCKER} exec zap zap-cli report -o /zap/wrk/zap_report.html -f html
+                    ${DOCKER} stop zap
+                    ${DOCKER} rm zap
                     '''
                 }
                 echo "OWASP ZAP scan completed."

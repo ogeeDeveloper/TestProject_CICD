@@ -11,13 +11,20 @@ provider "digitalocean" {
   token = var.do_token
 }
 
+# Check if the droplet exists
 data "digitalocean_droplet" "existing_droplet" {
-  name  = "app-server"
-  count = 1
+  name   = "app-server"
+  count  = 1
+  depends_on = [time_sleep.wait_for_droplet]
+}
+
+resource "time_sleep" "wait_for_droplet" {
+  depends_on = []
+  create_duration = "10s"
 }
 
 resource "digitalocean_droplet" "app_server" {
-  count     = local.existing_droplet_count == 0 ? 1 : 0
+  count     = length(data.digitalocean_droplet.existing_droplet) == 0 ? 1 : 0
   image     = "ubuntu-20-04-x64"
   name      = "app-server"
   region    = "nyc3"

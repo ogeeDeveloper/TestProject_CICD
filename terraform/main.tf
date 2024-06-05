@@ -15,8 +15,18 @@ data "digitalocean_droplet" "existing_droplet" {
   name = "app-server"
 }
 
+# Local variable for debugging
+locals {
+  existing_droplet_ids = data.digitalocean_droplet.existing_droplet.*.id
+}
+
+# Debug output
+output "existing_droplet_ids" {
+  value = local.existing_droplet_ids
+}
+
 resource "digitalocean_droplet" "app_server" {
-  count  = length(data.digitalocean_droplet.existing_droplet.id) == 0 ? 1 : 0
+  count  = length(local.existing_droplet_ids) == 0 ? 1 : 0
   image  = "ubuntu-20-04-x64"
   name   = "app-server"
   region = "nyc3"
@@ -25,5 +35,5 @@ resource "digitalocean_droplet" "app_server" {
 }
 
 output "app_server_ip" {
-  value = length(data.digitalocean_droplet.existing_droplet.id) > 0 ? data.digitalocean_droplet.existing_droplet.ipv4_address : digitalocean_droplet.app_server[0].ipv4_address
+  value = length(local.existing_droplet_ids) > 0 ? data.digitalocean_droplet.existing_droplet.ipv4_address : digitalocean_droplet.app_server[0].ipv4_address
 }

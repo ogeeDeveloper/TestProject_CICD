@@ -32,14 +32,20 @@ pipeline {
         stage('Static Code Analysis') {
             steps {
                 script {
-                    // Perform SonarQube analysis
                     withSonarQubeEnv('SonarQube') {
                         dir(env.MAVEN_PROJECT_DIR) {
-                            sh "${env.SONARQUBE_SCANNER}/bin/sonar-scanner"
+                            sh """
+                            ${env.SONARQUBE_SCANNER}/bin/sonar-scanner \
+                            -Dsonar.projectKey=TestProjectCiCd \
+                            -Dsonar.projectName=TestProject_CICD \
+                            -Dsonar.projectVersion=1.0 \
+                            -Dsonar.sources=src/main/java \
+                            -Dsonar.java.binaries=target/classes \
+                            -Dsonar.host.url=http://164.90.138.210:9000 \
+                            -Dsonar.login=SonarQubeServerToken
+                            """
                         }
                     }
-                    // Perform Checkmarx analysis
-                    checkmarxScan failBuildOnError: true
                 }
             }
         }

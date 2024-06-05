@@ -47,9 +47,8 @@ pipeline {
                         string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID')
                     ]) {
                         script {
-                            def terraformHome = tool name: 'Terraform', type: 'com.cloudbees.jenkins.plugins.customtools.CustomTool'
-                            sh "${terraformHome}/bin/terraform init"
-                            sh "${terraformHome}/bin/terraform apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                            sh "terraform init"
+                            sh "terraform apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
                         }
                     }
                 }

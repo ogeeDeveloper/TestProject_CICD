@@ -250,6 +250,28 @@ Create an Ansible playbook file named `setup_tools.yml`:
 
   ![alt text](image-9.png)
 
+# Configure Digital SSH
+
+You need to authenticate doctl with your DigitalOcean API token. Here’s how:
+
+1. **_Obtain DigitalOcean API Token:_**
+
+   - Go to your DigitalOcean Control Panel.
+   - Generate a new personal access token if you don’t have one already. Copy the token.
+
+2. **_Authenticate `doctl`:_**
+   - Run the following command and paste your API token when prompted:
+     ```bash
+     doctl auth init
+     ```
+     ![alt text](image-22.png)
+3. **_List SSH Keys_**
+   - After authenticating, you can list your SSH keys to get the SSH key ID:
+     ```bash
+     doctl compute ssh-key list
+     ```
+     ![alt text](image-23.png)
+
 # Configure Jenkins
 
 1. Access Jenkins Dashboard:

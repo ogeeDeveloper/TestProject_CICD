@@ -56,13 +56,14 @@ pipeline {
                         string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID')
                     ]) {
                         script {
-                            sh 'echo $PATH'  // Print PATH
-                            sh 'ls -l /usr/local/bin/terraform'  // Check if terraform binary exists
-                            sh 'which terraform'  // Locate terraform binary
-                            sh 'export PATH=$PATH:/usr/local/bin'  // Ensure /usr/local/bin is in PATH
-                            sh "${TERRAFORM_BIN} init"  // Initialize Terraform
-                            sh "$TERRAFORM_BIN plan -var do_token=$DO_TOKEN -var ssh_key_id=$SSH_KEY_ID"  // Plan Terraform changes
-                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"  // Apply Terraform
+                            // Initialize Terraform
+                            sh "${TERRAFORM_BIN} init"
+
+                            // Plan Terraform changes
+                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+
+                            // Apply Terraform changes
+                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
                         }
                     }
                 }

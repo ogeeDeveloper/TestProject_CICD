@@ -42,10 +42,15 @@ pipeline {
         stage('Infrastructure Provisioning') {
             steps {
                 dir("${TERRAFORM_DIR}") {
-                    script {
-                        def terraformHome = tool name: 'Terraform', type: 'com.cloudbees.jenkins.plugins.customtools.CustomTool'
-                        sh "${terraformHome}/terraform init"
-                        sh "${terraformHome}/terraform apply -auto-approve"
+                    withCredentials([
+                        string(credentialsId: 'do_token', variable: 'DO_TOKEN'),
+                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID')
+                    ]) {
+                        script {
+                            def terraformHome = tool name: 'Terraform', type: 'com.cloudbees.jenkins.plugins.customtools.CustomTool'
+                            sh "${terraformHome}/terraform init"
+                            sh "${terraformHome}/terraform apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                        }
                     }
                 }
             }

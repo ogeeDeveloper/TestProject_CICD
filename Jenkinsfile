@@ -11,6 +11,7 @@ pipeline {
         APP_SERVER_IP = ''
         MAVEN_HOME = tool name: 'Maven 3.9.7'  // Ensure this matches your Maven installation name
         PATH = "${env.MAVEN_HOME}/bin:${env.PATH}"
+        SONARQUBE_SCANNER = tool name: 'SonarQube'  // Ensure this matches your SonarQube Scanner installation name
     }
 
     stages {
@@ -34,7 +35,7 @@ pipeline {
                     // Perform SonarQube analysis
                     withSonarQubeEnv('SonarQube') {
                         dir(env.MAVEN_PROJECT_DIR) {
-                            sh 'mvn sonar:sonar'
+                            sh "${env.SONARQUBE_SCANNER}/bin/sonar-scanner"
                         }
                     }
                     // Perform Checkmarx analysis

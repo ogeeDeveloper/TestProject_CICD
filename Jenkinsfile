@@ -12,7 +12,7 @@ pipeline {
             steps {
                 dir("${MAVEN_PROJECT_DIR}") {
                     script {
-                        def mvnHome = tool 'Maven 3.9.7'
+                        def mvnHome = tool name: 'Maven 3.9.7', type: 'maven'
                         sh "${mvnHome}/bin/mvn clean package"
                     }
                 }
@@ -22,8 +22,10 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     dir("${MAVEN_PROJECT_DIR}") {
-                        def scannerHome = tool 'SonarQubeScanner'
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=TestProjectCiCd -Dsonar.projectName=TestProject_CICD -Dsonar.projectVersion=1.0 -Dsonar.sources=src -Dsonar.java.binaries=target/classes -Dsonar.host.url=http://164.90.138.210:9000 -Dsonar.login=${env.SONAR_TOKEN}"
+                        script {
+                            def scannerHome = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=TestProjectCiCd -Dsonar.projectName=TestProject_CICD -Dsonar.projectVersion=1.0 -Dsonar.sources=src -Dsonar.java.binaries=target/classes -Dsonar.host.url=http://164.90.138.210:9000 -Dsonar.login=${env.SONAR_TOKEN}"
+                        }
                     }
                 }
             }
@@ -32,9 +34,9 @@ pipeline {
             steps {
                 dir("${TERRAFORM_DIR}") {
                     script {
-                        def terraformHome = tool 'Terraform'
-                        sh "${terraformHome}/terraform init"
-                        sh "${terraformHome}/terraform apply -auto-approve"
+                        def terraformHome = tool name: 'Terraform', type: 'com.cloudbees.jenkins.plugins.customtools.CustomTool'
+                        sh "${terraformHome}/bin/terraform init"
+                        sh "${terraformHome}/bin/terraform apply -auto-approve"
                     }
                 }
             }

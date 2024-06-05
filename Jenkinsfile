@@ -32,8 +32,7 @@ pipeline {
                                 -Dsonar.sources=src \
                                 -Dsonar.java.binaries=target/classes \
                                 -Dsonar.host.url=http://164.90.138.210:9000 \
-                                -Dsonar.login=${env.SONAR_TOKEN} \
-                                -cp /path/to/logback-classic.jar
+                                -Dsonar.login=${env.SONAR_TOKEN}
                             """
                         }
                     }

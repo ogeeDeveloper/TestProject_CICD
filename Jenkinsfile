@@ -49,8 +49,8 @@ pipeline {
                     ]) {
                         script {
                             sh 'echo $PATH'  // Debugging step to print PATH
-                            sh '${env.TERRAFORM_BIN} init'
-                            sh '${env.TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}'
+                            sh "${env.TERRAFORM_BIN} init"
+                            sh "${env.TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
                         }
                     }
                 }

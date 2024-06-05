@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "latest" # or specify a specific version
+    }
+  }
+}
+
 provider "digitalocean" {
   token = var.do_token
 }

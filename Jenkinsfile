@@ -6,7 +6,7 @@ pipeline {
         ANSIBLE_PLAYBOOK = 'deploy.yml'
         ANSIBLE_INVENTORY = 'inventory.ini'
         SONAR_TOKEN = credentials('SonarQubeServerToken')
-        TERRAFORM_BIN = '/usr/local/bin/terraform'
+        TERRAFORM_BIN = '/usr/local/bin/terraform'  // Ensure this path is correct
     }
     stages {
         stage('Build') {
@@ -52,8 +52,8 @@ pipeline {
                             sh 'ls -l /usr/local/bin/terraform'  // Check if terraform binary exists
                             sh 'which terraform'  // Locate terraform binary
                             sh 'export PATH=$PATH:/usr/local/bin'  // Ensure /usr/local/bin is in PATH
-                            sh '${env.TERRAFORM_BIN} init'  // Initialize Terraform
-                            sh '${env.TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}'  // Apply Terraform
+                            sh '${TERRAFORM_BIN} init'  // Initialize Terraform
+                            sh '${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}'  // Apply Terraform
                         }
                     }
                 }

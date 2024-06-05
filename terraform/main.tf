@@ -34,12 +34,12 @@ output "existing_droplet_ip" {
 
 resource "digitalocean_droplet" "app_server" {
   count  = local.existing_droplet_count == 0 ? 1 : 0
-  image  = "ubuntu-20-04-x64"
-  name   = "app-server"
+  image = "ubuntu-20-04-x64"
+  name = "app_server"
   region = "nyc3"
-  size   = "s-1vcpu-1gb"
+  size = "s-1vcpu-1gb"
+  monitoring = true
   ssh_keys = [var.ssh_key_id]
-}
 
 output "app_server_ip" {
   value = local.existing_droplet_count > 0 ? local.existing_droplet_ip : digitalocean_droplet.app_server[0].ipv4_address

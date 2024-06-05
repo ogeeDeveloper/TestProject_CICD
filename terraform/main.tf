@@ -40,6 +40,7 @@ resource "digitalocean_droplet" "app_server" {
   size = "s-1vcpu-1gb"
   monitoring = true
   ssh_keys = [var.ssh_key_id]
+}
 
 output "app_server_ip" {
   value = local.existing_droplet_count > 0 ? local.existing_droplet_ip : digitalocean_droplet.app_server[0].ipv4_address

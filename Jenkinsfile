@@ -24,7 +24,17 @@ pipeline {
                     dir("${MAVEN_PROJECT_DIR}") {
                         script {
                             def scannerHome = tool name: 'SonarQubeScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=TestProjectCiCd -Dsonar.projectName=TestProject_CICD -Dsonar.projectVersion=1.0 -Dsonar.sources=src -Dsonar.java.binaries=target/classes -Dsonar.host.url=http://164.90.138.210:9000 -Dsonar.login=${env.SONAR_TOKEN}"
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                -Dsonar.projectKey=TestProjectCiCd \
+                                -Dsonar.projectName=TestProject_CICD \
+                                -Dsonar.projectVersion=1.0 \
+                                -Dsonar.sources=src \
+                                -Dsonar.java.binaries=target/classes \
+                                -Dsonar.host.url=http://164.90.138.210:9000 \
+                                -Dsonar.login=${env.SONAR_TOKEN} \
+                                -cp /path/to/logback-classic.jar
+                            """
                         }
                     }
                 }
@@ -35,8 +45,8 @@ pipeline {
                 dir("${TERRAFORM_DIR}") {
                     script {
                         def terraformHome = tool name: 'Terraform', type: 'com.cloudbees.jenkins.plugins.customtools.CustomTool'
-                        sh "${terraformHome}/bin/terraform init"
-                        sh "${terraformHome}/bin/terraform apply -auto-approve"
+                        sh "${terraformHome}/terraform init"
+                        sh "${terraformHome}/terraform apply -auto-approve"
                     }
                 }
             }

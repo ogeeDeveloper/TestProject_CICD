@@ -37,7 +37,7 @@ resource "digitalocean_droplet" "app_server" {
   image  = "ubuntu-20-04-x64"
   name   = "app-server"
   region = "nyc3"
-  size   = "s-2vcpu-2gb"
+  size   = "s-1vcpu-1gb"
   ssh_keys = [var.ssh_key_id]
 }
 

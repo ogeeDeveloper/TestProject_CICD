@@ -71,12 +71,18 @@ pipeline {
         }
         stage('Deploy Application') {
             steps {
-                ansiblePlaybook playbook: "${ANSIBLE_PLAYBOOK}", inventory: "${ANSIBLE_INVENTORY}", extraVars: [
-                    "ansible_user": "deployer",
-                    "ansible_password": "${ANSIBLE_PASSWORD}",
-                    "server_ip": "${SERVER_IP}",
-                    "workspace": "${WORKSPACE}"
-                ]
+                withCredentials([
+                    string(credentialsId: 'ansible_password', variable: 'ANSIBLE_PASSWORD'),
+                    string(credentialsId: 'server_ip', variable: 'SERVER_IP'),
+                    sshUserPrivateKey(credentialsId: 'ansible_ssh_key', keyFileVariable: 'SSH_KEY_FILE', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
+                ]) {
+                    ansiblePlaybook playbook: "${ANSIBLE_PLAYBOOK}", inventory: "${ANSIBLE_INVENTORY}", extraVars: [
+                        "ansible_user": "${ANSIBLE_USER}",
+                        "ansible_password": "${ANSIBLE_PASSWORD}",
+                        "server_ip": "${SERVER_IP}",
+                        "workspace": "${WORKSPACE}"
+                    ]
+                }
             }
         }
         stage('DAST with OWASP ZAP') {

@@ -11,7 +11,7 @@ pipeline {
     stages {
         stage('Checkout SCM') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']],
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']],
                           doGenerateSubmoduleConfigurations: false,
                           extensions: [], submoduleCfg: [],
                           userRemoteConfigs: [[url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git']]])

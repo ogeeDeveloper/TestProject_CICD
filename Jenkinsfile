@@ -9,6 +9,8 @@ pipeline {
         ANSIBLE_INVENTORY = 'inventory.ini'
         SSH_PRIVATE_KEY_PATH = '/root/.ssh/id_rsa'
         APP_SERVER_IP = ''
+        MAVEN_HOME = tool name: 'Maven 3.9.7'  // Ensure this matches your Maven installation name
+        PATH = "${env.MAVEN_HOME}/bin:${env.PATH}"
     }
 
     stages {

@@ -41,7 +41,7 @@ pipeline {
                                 -Dsonar.sources=src \
                                 -Dsonar.java.binaries=target/classes \
                                 -Dsonar.host.url=http://164.90.138.210:9000 \
-                                -Dsonar.login=${env.SONAR_TOKEN}
+                                -Dsonar.login=${SONAR_TOKEN}
                             """
                         }
                     }
@@ -60,8 +60,8 @@ pipeline {
                             sh 'ls -l /usr/local/bin/terraform'  // Check if terraform binary exists
                             sh 'which terraform'  // Locate terraform binary
                             sh 'export PATH=$PATH:/usr/local/bin'  // Ensure /usr/local/bin is in PATH
-                            sh '${env.TERRAFORM_BIN} init'  // Initialize Terraform
-                            sh '${env.TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}'  // Apply Terraform
+                            sh "$TERRAFORM_BIN init"  // Initialize Terraform
+                            sh "$TERRAFORM_BIN apply -auto-approve -var do_token=$DO_TOKEN -var ssh_key_id=$SSH_KEY_ID"  // Apply Terraform
                         }
                     }
                 }
@@ -73,7 +73,7 @@ pipeline {
                     "ansible_user": "deployer",
                     "ansible_password": "${ANSIBLE_PASSWORD}",
                     "server_ip": "${SERVER_IP}",
-                    "workspace": "${env.WORKSPACE}"
+                    "workspace": "${WORKSPACE}"
                 ]
             }
         }

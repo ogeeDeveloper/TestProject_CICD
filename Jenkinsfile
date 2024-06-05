@@ -6,8 +6,8 @@ pipeline {
         ANSIBLE_PLAYBOOK = 'deploy.yml'
         ANSIBLE_INVENTORY = 'inventory.ini'
         SONAR_TOKEN = credentials('SonarQubeServerToken')
-        PATH = "/usr/local/bin:${env.PATH}"  // Ensure Terraform is in the PATH
-        TERRAFORM_BIN = "/usr/local/bin/terraform"  // Full path to Terraform binary
+        PATH = "/snap/bin:${env.PATH}"  // Add /snap/bin to the PATH
+        TERRAFORM_BIN = "/snap/bin/terraform"  // Full path to Terraform binary
     }
     stages {
         stage('Build') {

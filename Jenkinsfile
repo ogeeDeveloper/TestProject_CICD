@@ -7,6 +7,8 @@ pipeline {
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_PLAYBOOK = 'deploy.yml'
         ANSIBLE_INVENTORY = 'inventory.ini'
+        SSH_PRIVATE_KEY_PATH = '/root/.ssh/id_rsa'
+        APP_SERVER_IP = ''
     }
 
     stages {
@@ -43,8 +45,19 @@ pipeline {
                 script {
                     // Navigate to the Terraform directory and provision infrastructure
                     dir(env.TERRAFORM_DIR) {
+                        // Initialize Terraform
                         sh 'terraform init'
-                        sh 'terraform apply -auto-approve'
+                        // Check if the droplet exists
+                        def result = sh(script: "terraform output -raw app_server_ip || echo ''", returnStdout: true).trim()
+                        if (result == '') {
+                            // Provision a new droplet if it doesn't exist
+                            sh 'terraform apply -auto-approve'
+                            // Retrieve the new IP address
+                            env.APP_SERVER_IP = sh(script: "terraform output -raw app_server_ip", returnStdout: true).trim()
+                        } else {
+                            // Use the existing IP address
+                            env.APP_SERVER_IP = result
+                        }
                     }
                 }
             }
@@ -52,22 +65,19 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 script {
-                    // Retrieve the IP address of the provisioned server from Terraform
-                    def server_ip = sh(script: "cd ${env.TERRAFORM_DIR} && terraform output -raw app_server_ip", returnStdout: true).trim()
-                    
                     // Write the dynamic inventory to a file
-                    writeFile file: 'inventory.ini', text: "[app_servers]\n${server_ip} ansible_user=deployer ansible_ssh_private_key_file=/path/to/your/private/key\n[all:vars]\nansible_python_interpreter=/usr/bin/python3"
+                    writeFile file: env.ANSIBLE_INVENTORY, text: "[app_servers]\n${env.APP_SERVER_IP} ansible_user=deployer ansible_ssh_private_key_file=${env.SSH_PRIVATE_KEY_PATH}\n[all:vars]\nansible_python_interpreter=/usr/bin/python3"
                     
                     // Use Ansible to deploy the application to the server
-                    ansiblePlaybook playbook: env.ANSIBLE_PLAYBOOK, inventory: 'inventory.ini', extraVars: [
+                    ansiblePlaybook playbook: env.ANSIBLE_PLAYBOOK, inventory: env.ANSIBLE_INVENTORY, extraVars: [
                         "ansible_user": "deployer",
-                        "ansible_password": "your_ansible_password",  // replace with your actual password if using password instead of key
-                        "server_ip": server_ip,
+                        "ansible_password": "Mypassword",  // replace with your actual password if using password instead of key
+                        "server_ip": env.APP_SERVER_IP,
                         "workspace": "${env.WORKSPACE}"
                     ]
                     
                     // Save the application URL for later stages
-                    env.APP_URL = "http://${server_ip}:8080"  // Adjust the port if necessary
+                    env.APP_URL = "http://${env.APP_SERVER_IP}:8080"  // Adjust the port if necessary
                 }
             }
         }
@@ -86,10 +96,10 @@ pipeline {
                     dir(env.TERRAFORM_DIR) {
                         sh 'terraform apply -var="env=prod" -auto-approve'
                     }
-                    ansiblePlaybook playbook: 'deploy_prod.yml', inventory: 'inventory.ini', extraVars: [
+                    ansiblePlaybook playbook: 'deploy_prod.yml', inventory: env.ANSIBLE_INVENTORY, extraVars: [
                         "ansible_user": "deployer",
-                        "ansible_password": "your_ansible_password",  // replace with your actual password if using password instead of key
-                        "server_ip": server_ip,
+                        "ansible_password": "Mypassword",  // replace with your actual password if using password instead of key
+                        "server_ip": env.APP_SERVER_IP,
                         "workspace": "${env.WORKSPACE}"
                     ]
                 }
@@ -103,12 +113,14 @@ pipeline {
             archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
         }
         success {
-            // Send email notification on successful build
-            emailext to: 'team@example.com', subject: 'Build Successful', body: 'The build was successful!'
+            script {
+                echo "Build and deployment successful!"
+            }
         }
         failure {
-            // Send email notification on failed build
-            emailext to: 'team@example.com', subject: 'Build Failed', body: 'The build failed. Please check Jenkins for details.'
+            script {
+                echo "Build failed. Please check Jenkins for details."
+            }
         }
     }
 }

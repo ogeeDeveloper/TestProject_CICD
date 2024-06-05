@@ -13,7 +13,7 @@ provider "digitalocean" {
 
 data "digitalocean_droplet" "existing_droplet" {
   name = "app-server"
-  count = 0
+  count = 1
 }
 
 resource "digitalocean_droplet" "app_server" {
@@ -26,8 +26,5 @@ resource "digitalocean_droplet" "app_server" {
 }
 
 output "app_server_ip" {
-  value = coalesce(
-    data.digitalocean_droplet.existing_droplet[0].ipv4_address,
-    digitalocean_droplet.app_server[0].ipv4_address
-  )
+  value = length(data.digitalocean_droplet.existing_droplet) > 0 ? data.digitalocean_droplet.existing_droplet[0].ipv4_address : digitalocean_droplet.app_server[0].ipv4_address
 }

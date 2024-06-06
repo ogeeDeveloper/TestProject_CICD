@@ -67,7 +67,7 @@
 
     - name: Verify application deployment
       uri:
-        url: "http://{{ server_ip }}:8080/java-tomcat-sample/"
+        url: "http://{{ server_ip }}:8080/"
         return_content: yes
       register: app_status
       until: app_status.status == 200
@@ -75,7 +75,8 @@
       delay: 10
       become: yes
 
-    - name: Debug application log
+    - name: Debug application log if deployment verification fails
+      when: app_status.status != 200
       shell: cat /home/{{ ansible_user }}/app.log
       register: app_log
       become: yes

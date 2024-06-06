@@ -1,20 +1,19 @@
----
-- hosts: all
+- hosts: app_servers
   become: yes
   tasks:
-    - name: Ensure SSH service is enabled and running
-      systemd:
-        name: ssh
-        state: started
-        enabled: yes
-
-    - name: Install necessary packages
+    - name: Update apt cache
       apt:
-        name: "{{ item }}"
+        update_cache: yes
+
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
         state: present
-      with_items:
-        - openjdk-11-jdk
-        - ansible
-        - sshpass
-        - python3
-        - python3-pip
+
+    - name: Ensure the application directory exists
+      file:
+        path: /opt/app
+        state: directory
+        owner: deployer
+        group: deployer
+        mode: "0755"

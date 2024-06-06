@@ -10,14 +10,9 @@ pipeline {
         ANSIBLE_NAME = 'Ansible'
     }
     stages {
-        stage('Cleanup Workspace') {
-            steps {
-                deleteDir()
-            }
-        }
         stage('Checkout SCM') {
             steps {
-                git branch: 'master', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', credentialsId: 'your-git-credentials-id'
+                git branch: 'master', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
             }
         }
         stage('Build') {
@@ -56,60 +51,23 @@ pipeline {
                 dir("${TERRAFORM_DIR}") {
                     withCredentials([
                         string(credentialsId: 'do_token', variable: 'DO_TOKEN'),
-                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID'),
-                        sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', passphraseVariable: '', usernameVariable: 'SSH_USER')
+                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID')
                     ]) {
                         script {
                             // Initialize Terraform
                             sh "${TERRAFORM_BIN} init"
 
-                            // Check if the droplet already exists
+                            // Plan Terraform changes
+                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+
+                            // Apply Terraform changes
+                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+
+                            // Capture Terraform output
                             def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
                             def jsonOutput = readJSON text: output
-
-                            if (jsonOutput?.app_server_ip?.value) {
-                                // Use existing droplet
-                                env.SERVER_IP = jsonOutput.app_server_ip.value
-                                echo "Using existing droplet with IP: ${env.SERVER_IP}"
-                            } else {
-                                // Plan and Apply Terraform changes
-                                sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
-                                sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
-
-                                // Capture Terraform output
-                                output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
-                                jsonOutput = readJSON text: output
-                                env.SERVER_IP = jsonOutput.app_server_ip.value
-                            }
+                            env.SERVER_IP = jsonOutput.app_server_ip.value
                         }
-                    }
-                }
-            }
-        }
-        stage('Update Inventory') {
-            steps {
-                script {
-                    writeFile file: "${ANSIBLE_INVENTORY}", text: """
-                        [app_servers]
-                        ${SERVER_IP} ansible_user=deployer ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH}
-
-                        [all:vars]
-                        ansible_python_interpreter=/usr/bin/python3
-                    """
-                }
-            }
-        }
-        stage('Setup Droplet') {
-            steps {
-                withCredentials([
-                    sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
-                ]) {
-                    script {
-                        def ansibleHome = tool name: "${ANSIBLE_NAME}"
-                        sh "export PATH=${ansibleHome}/bin:\$PATH"
-                        sh "echo 'Ansible Home: ${ansibleHome}'"
-                        sh "ls -l ${ansibleHome}/bin"
-                        sh "${ansibleHome}/bin/ansible-playbook setup_droplet.yml -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
                     }
                 }
             }
@@ -118,7 +76,7 @@ pipeline {
             steps {
                 withCredentials([
                     string(credentialsId: 'ansible_password', variable: 'ANSIBLE_PASSWORD'),
-                    sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
+                    sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_KEY_FILE', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
                 ]) {
                     script {
                         def ansibleHome = tool name: "${ANSIBLE_NAME}"
@@ -127,13 +85,6 @@ pipeline {
                         sh "ls -l ${ansibleHome}/bin"
                         sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
                     }
-                }
-            }
-        }
-        stage('Deploy to Production') {
-            steps {
-                script {
-                    echo 'Deploying to production...'
                 }
             }
         }

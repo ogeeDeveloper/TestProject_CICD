@@ -38,3 +38,25 @@
       args:
         chdir: /home/{{ ansible_user }}
       become: yes
+
+    - name: Wait for the application to start
+      pause:
+        minutes: 1
+
+    - name: Check if the application is running
+      shell: pgrep -f "java -jar /home/{{ ansible_user }}/java-tomcat-sample.war"
+      register: app_status
+      failed_when: app_status.rc != 0
+      become: yes
+
+    - name: Verify application deployment
+      uri:
+        url: "http://{{ server_ip }}:8080/"
+        return_content: yes
+      register: response
+
+    - name: Check if application responded successfully
+      assert:
+        that:
+          - response.status == 200
+        fail_msg: "Application is not running or not accessible"

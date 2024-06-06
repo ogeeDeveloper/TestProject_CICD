@@ -12,6 +12,12 @@
         done
       become: yes
 
+    - name: Kill any existing apt-get processes
+      shell: |
+        sudo killall apt-get || true
+        sudo killall dpkg || true
+      become: yes
+
     - name: Update apt cache
       apt:
         update_cache: yes

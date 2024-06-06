@@ -9,6 +9,11 @@ pipeline {
         ANSIBLE_NAME = 'Ansible'
     }
     stages {
+        stage('Cleanup') {
+            steps {
+                deleteDir()
+            }
+        }
         stage('Checkout SCM') {
             steps {
                 git branch: 'dev', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'

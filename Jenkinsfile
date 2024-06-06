@@ -81,6 +81,19 @@ pipeline {
                 }
             }
         }
+        stage('Update Inventory') {
+            steps {
+                script {
+                    writeFile file: "${ANSIBLE_INVENTORY}", text: """
+                        [app_servers]
+                        ${SERVER_IP} ansible_user=deployer ansible_ssh_private_key_file=/root/.ssh/id_rsa
+
+                        [all:vars]
+                        ansible_python_interpreter=/usr/bin/python3
+                    """
+                }
+            }
+        }
         stage('Deploy Application') {
             steps {
                 withCredentials([

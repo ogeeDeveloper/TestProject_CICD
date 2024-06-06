@@ -60,6 +60,7 @@ pipeline {
                         string(credentialsId: 'ssh_public_key', variable: 'SSH_PUBLIC_KEY')
                     ]) {
                         script {
+                            def start = System.currentTimeMillis()
                             // Initialize Terraform
                             sh "${TERRAFORM_BIN} init"
 
@@ -73,6 +74,8 @@ pipeline {
                             def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
                             def jsonOutput = readJSON text: output
                             env.SERVER_IP = jsonOutput.app_server_ip.value
+                            def end = System.currentTimeMillis()
+                            echo "Provisioning time: ${(end - start) / 1000} seconds"
                         }
                     }
                 }
@@ -85,11 +88,15 @@ pipeline {
                     sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_KEY_FILE', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
                 ]) {
                     script {
+                        def start = System.currentTimeMillis()
                         def ansibleHome = tool name: "${ANSIBLE_NAME}"
                         sh "export PATH=${ansibleHome}/bin:\$PATH"
                         sh "echo 'Ansible Home: ${ansibleHome}'"
                         sh "echo '[app_servers]\n${SERVER_IP}' > dynamic_inventory.ini"
                         sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i dynamic_inventory.ini -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
+                        def end = System.currentTimeMillis()
+                        echo "Deployment time: ${(end - start) / 1000} seconds"
+
                     }
                 }
             }

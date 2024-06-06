@@ -1,0 +1,20 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+    - name: Ensure SSH service is enabled and running
+      systemd:
+        name: ssh
+        state: started
+        enabled: yes
+
+    - name: Install necessary packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - openjdk-11-jdk
+        - ansible
+        - sshpass
+        - python3
+        - python3-pip

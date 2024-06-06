@@ -17,11 +17,7 @@ pipeline {
         }
         stage('Checkout SCM') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']],
-                          doGenerateSubmoduleConfigurations: false,
-                          extensions: [[$class: 'CleanBeforeCheckout']], // Clean workspace before checkout
-                          submoduleCfg: [],
-                          userRemoteConfigs: [[url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', credentialsId: 'your-git-credentials-id']]])
+                git branch: 'master', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', credentialsId: 'your-git-credentials-id'
             }
         }
         stage('Build') {
@@ -60,14 +56,15 @@ pipeline {
                 dir("${TERRAFORM_DIR}") {
                     withCredentials([
                         string(credentialsId: 'do_token', variable: 'DO_TOKEN'),
-                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID')
+                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID'),
+                        file(credentialsId: 'ssh_private_key', variable: 'SSH_PRIVATE_KEY_PATH')
                     ]) {
                         script {
                             // Initialize Terraform
                             sh "${TERRAFORM_BIN} init"
 
-                            // Plan Terraform changes
-                            def planOutput = sh(script: "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}", returnStdout: true).trim()
+                            // Plan and Apply Terraform changes
+                            def planOutput = sh(script: "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH}", returnStdout: true).trim()
 
                             if (planOutput.contains("No changes")) {
                                 // Capture Terraform output for the existing server
@@ -76,7 +73,7 @@ pipeline {
                                 env.SERVER_IP = jsonOutput.app_server_ip.value
                             } else {
                                 // Apply Terraform changes if necessary
-                                sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                                sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH}"
                                 // Capture Terraform output
                                 def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
                                 def jsonOutput = readJSON text: output
@@ -92,7 +89,7 @@ pipeline {
                 script {
                     writeFile file: "${ANSIBLE_INVENTORY}", text: """
                         [app_servers]
-                        ${SERVER_IP} ansible_user=deployer ansible_ssh_private_key_file=/root/.ssh/id_rsa
+                        ${SERVER_IP} ansible_user=deployer ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH}
 
                         [all:vars]
                         ansible_python_interpreter=/usr/bin/python3

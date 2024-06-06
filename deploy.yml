@@ -6,7 +6,7 @@
   tasks:
     - name: Wait for dpkg lock to be released
       shell: |
-        while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        while sudo lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
           echo "Waiting for dpkg lock to be released..."
           sleep 2
         done

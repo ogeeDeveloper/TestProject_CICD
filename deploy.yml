@@ -61,7 +61,7 @@
 
     - name: Verify application deployment
       uri:
-        url: "http://{{ server_ip }}:8080/"
+        url: "http://{{ server_ip }}:8080/java-tomcat-sample/"
         return_content: yes
       register: app_status
       until: app_status.status == 200

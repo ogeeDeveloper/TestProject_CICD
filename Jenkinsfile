@@ -64,11 +64,9 @@ pipeline {
                             sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
 
                             // Capture Terraform output
-                            script {
-                                def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
-                                def jsonOutput = readJSON text: output
-                                env.SERVER_IP = jsonOutput.app_server_ip.value
-                            }
+                            def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
+                            def jsonOutput = readJSON text: output
+                            env.SERVER_IP = jsonOutput.app_server_ip.value
                         }
                     }
                 }
@@ -82,10 +80,12 @@ pipeline {
                 ]) {
                     script {
                         def ansibleHome = tool name: "${ANSIBLE_NAME}"
-                        sh "export PATH=${ansibleHome}/bin:$PATH"
-                        sh "echo 'Ansible Home: ${ansibleHome}'"
-                        sh "ls -l ${ansibleHome}/bin"
-                        sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
+                        withEnv(["PATH+ANSIBLE=${ansibleHome}/bin"]) {
+                            sh "echo 'Ansible Home: ${ansibleHome}'"
+                            sh "ls -l ${ansibleHome}/bin"
+                            sh "ansible --version"
+                            sh "ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
+                        }
                     }
                 }
             }

@@ -22,9 +22,9 @@ resource "digitalocean_droplet" "app_server" {
     inline = [
       "apt-get update",
       "apt-get install -y sshpass",
-      "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+      "useradd -m -s /bin/bash deployer",
       "mkdir -p /home/deployer/.ssh",
-      "echo '${var.ssh_public_key}' >> /home/deployer/.ssh/authorized_keys",
+      "echo '${var.ssh_public_key}' > /home/deployer/.ssh/authorized_keys",
       "chown -R deployer:deployer /home/deployer/.ssh",
       "chmod 700 /home/deployer/.ssh",
       "chmod 600 /home/deployer/.ssh/authorized_keys"

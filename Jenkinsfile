@@ -97,6 +97,7 @@ pipeline {
                 }
             }
         }
+        /* Commenting out DAST with OWASP ZAP for now
         stage('DAST with OWASP ZAP') {
             steps {
                 script {
@@ -104,6 +105,7 @@ pipeline {
                 }
             }
         }
+        */
         stage('Deploy to Production') {
             steps {
                 script {

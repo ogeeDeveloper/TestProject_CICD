@@ -20,6 +20,10 @@
       apt:
         name: openjdk-11-jdk
         state: present
+      retries: 5
+      delay: 10
+      register: result
+      until: result is succeeded
       become: yes
 
     - name: Copy application WAR to server

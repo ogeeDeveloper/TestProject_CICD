@@ -85,6 +85,9 @@ pipeline {
                 ]) {
                     script {
                         def ansibleHome = tool name: "${ANSIBLE_NAME}"
+                        sh "export PATH=${ansibleHome}/bin:$PATH"
+                        sh "echo 'Ansible Home: ${ansibleHome}'"
+                        sh "ls -l ${ansibleHome}/bin"
                         sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
                     }
                 }

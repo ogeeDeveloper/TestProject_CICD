@@ -14,14 +14,15 @@
         state: present
       become: yes
 
-    - name: Copy application jar to server
+    - name: Copy application WAR to server
       copy:
-        src: "{{ workspace }}/java-tomcat-sample/target/application.jar"
-        dest: /home/{{ ansible_user }}/application.jar
+        src: "{{ workspace }}/java-tomcat-sample/target/java-tomcat-sample-0.0.1.war"
+        dest: /home/{{ ansible_user }}/java-tomcat-sample.war
       become: yes
 
     - name: Run the application
-      shell: java -jar /home/{{ ansible_user }}/application.jar &
+      shell: |
+        nohup java -jar /home/{{ ansible_user }}/java-tomcat-sample.war > /dev/null 2>&1 &
       args:
         chdir: /home/{{ ansible_user }}
       become: yes

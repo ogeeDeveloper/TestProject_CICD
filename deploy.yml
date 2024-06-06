@@ -4,6 +4,14 @@
     ansible_user: "deployer"
     server_ip: "{{ server_ip }}"
   tasks:
+    - name: Wait for dpkg lock to be released
+      shell: |
+        while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+          echo "Waiting for dpkg lock to be released..."
+          sleep 2
+        done
+      become: yes
+
     - name: Ensure Java is installed
       apt:
         name: openjdk-11-jdk

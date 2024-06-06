@@ -4,26 +4,10 @@
     ansible_user: "deployer"
     server_ip: "{{ server_ip }}"
   tasks:
-    - name: Ensure the system is updated
-      apt:
-        update_cache: yes
-
-    - name: Wait for dpkg lock to be released
-      shell: |
-        while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
-          echo "Waiting for dpkg lock to be released..."
-          sleep 5
-        done
-      become: yes
-
     - name: Ensure Java is installed
       apt:
         name: openjdk-11-jdk
         state: present
-      retries: 5
-      delay: 10
-      register: result
-      until: result is succeeded
       become: yes
 
     - name: Copy application WAR to server
@@ -32,47 +16,39 @@
         dest: /home/{{ ansible_user }}/java-tomcat-sample.war
       become: yes
 
+    - name: Copy webapp-runner JAR to server
+      copy:
+        src: "{{ workspace }}/java-tomcat-sample/target/dependency/webapp-runner.jar"
+        dest: /home/{{ ansible_user }}/webapp-runner.jar
+      become: yes
+
     - name: Create a script to run the application
       copy:
         dest: /home/{{ ansible_user }}/run_app.sh
         content: |
           #!/bin/bash
-          nohup java -jar /home/{{ ansible_user }}/java-tomcat-sample.war > /home/{{ ansible_user }}/app.log 2>&1 &
-        mode: "0755"
+          nohup java -jar /home/{{ ansible_user }}/webapp-runner.jar --port 8080 /home/{{ ansible_user }}/java-tomcat-sample.war > /home/{{ ansible_user }}/app.log 2>&1 &
+      mode: "0755"
       become: yes
 
-    - name: Run the application
+    - name: Start the application
       shell: /home/{{ ansible_user }}/run_app.sh
       become: yes
 
-    - name: Wait for the application to start
-      pause:
-        minutes: 1
-
-    - name: Check if the application is running
-      shell: pgrep -f "java -jar /home/{{ ansible_user }}/java-tomcat-sample.war"
+    - name: Verify application deployment
+      uri:
+        url: "http://{{ server_ip }}:8080/"
+        return_content: yes
       register: app_status
-      failed_when: app_status.rc != 0
+      until: app_status.status == 200
+      retries: 5
+      delay: 10
       become: yes
 
-    - name: Print application logs
+    - name: Debug application log
       shell: cat /home/{{ ansible_user }}/app.log
       register: app_log
       become: yes
 
     - debug:
         var: app_log.stdout_lines
-
-    - name: Verify application deployment
-      uri:
-        url: "http://{{ server_ip }}:8080/"
-        return_content: yes
-      register: response
-      retries: 5
-      delay: 15
-
-    - name: Check if application responded successfully
-      assert:
-        that:
-          - response.status == 200
-        fail_msg: "Application is not running or not accessible"

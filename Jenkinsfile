@@ -7,7 +7,7 @@ pipeline {
         ANSIBLE_INVENTORY = 'inventory.ini'
         SONAR_TOKEN = credentials('SonarQubeServerToken')
         TERRAFORM_BIN = '/usr/local/bin/terraform'
-        ANSIBLE_NAME = 'Ansible'
+        ANSIBLE_NAME = 'Ansible' // Reference to the Ansible tool configured in Jenkins
     }
     stages {
         stage('Checkout SCM') {

@@ -7,7 +7,7 @@ pipeline {
         ANSIBLE_INVENTORY = 'inventory.ini'
         SONAR_TOKEN = credentials('SonarQubeServerToken')
         TERRAFORM_BIN = '/usr/local/bin/terraform'
-        ANSIBLE_NAME = 'Ansible' // Reference to the Ansible tool configured in Jenkins
+        ANSIBLE_NAME = 'Ansible'
     }
     stages {
         stage('Cleanup Workspace') {
@@ -57,7 +57,7 @@ pipeline {
                     withCredentials([
                         string(credentialsId: 'do_token', variable: 'DO_TOKEN'),
                         string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID'),
-                        file(credentialsId: 'ssh_private_key', variable: 'SSH_PRIVATE_KEY_PATH')
+                        sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', passphraseVariable: '', usernameVariable: 'SSH_USER')
                     ]) {
                         script {
                             // Initialize Terraform
@@ -97,11 +97,26 @@ pipeline {
                 }
             }
         }
+        stage('Setup Droplet') {
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
+                ]) {
+                    script {
+                        def ansibleHome = tool name: "${ANSIBLE_NAME}"
+                        sh "export PATH=${ansibleHome}/bin:\$PATH"
+                        sh "echo 'Ansible Home: ${ansibleHome}'"
+                        sh "ls -l ${ansibleHome}/bin"
+                        sh "${ansibleHome}/bin/ansible-playbook setup_droplet.yml -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
+                    }
+                }
+            }
+        }
         stage('Deploy Application') {
             steps {
                 withCredentials([
                     string(credentialsId: 'ansible_password', variable: 'ANSIBLE_PASSWORD'),
-                    sshUserPrivateKey(credentialsId: 'ansible_ssh_key', keyFileVariable: 'SSH_KEY_FILE', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
+                    sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
                 ]) {
                     script {
                         def ansibleHome = tool name: "${ANSIBLE_NAME}"

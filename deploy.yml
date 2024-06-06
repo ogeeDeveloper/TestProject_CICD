@@ -38,7 +38,7 @@
         content: |
           #!/bin/bash
           nohup java -jar /home/{{ ansible_user }}/java-tomcat-sample.war > /home/{{ ansible_user }}/app.log 2>&1 &
-      mode: "0755"
+        mode: "0755"
       become: yes
 
     - name: Run the application

@@ -8,6 +8,14 @@
       apt:
         update_cache: yes
 
+    - name: Wait for dpkg lock to be released
+      shell: |
+        while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
+          echo "Waiting for dpkg lock to be released..."
+          sleep 5
+        done
+      become: yes
+
     - name: Ensure Java is installed
       apt:
         name: openjdk-11-jdk

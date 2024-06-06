@@ -37,6 +37,12 @@ resource "digitalocean_droplet" "app_server" {
       host        = self.ipv4_address
     }
   }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      ssh-keyscan -H ${self.ipv4_address} >> ~/.ssh/known_hosts
+    EOF
+  }
 }
 
 output "app_server_ip" {

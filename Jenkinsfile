@@ -7,6 +7,7 @@ pipeline {
         ANSIBLE_INVENTORY = 'inventory.ini'
         SONAR_TOKEN = credentials('SonarQubeServerToken')
         TERRAFORM_BIN = '/usr/local/bin/terraform'
+        ANSIBLE_NAME = 'Ansible'
     }
     stages {
         stage('Checkout SCM') {
@@ -64,6 +65,13 @@ pipeline {
 
                             // Apply Terraform changes
                             sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+
+                            // Capture Terraform output
+                            script {
+                                def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
+                                def jsonOutput = readJSON text: output
+                                env.SERVER_IP = jsonOutput.app_server_ip.value
+                            }
                         }
                     }
                 }
@@ -73,15 +81,12 @@ pipeline {
             steps {
                 withCredentials([
                     string(credentialsId: 'ansible_password', variable: 'ANSIBLE_PASSWORD'),
-                    string(credentialsId: 'server_ip', variable: 'SERVER_IP'),
                     sshUserPrivateKey(credentialsId: 'ansible_ssh_key', keyFileVariable: 'SSH_KEY_FILE', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
                 ]) {
-                    ansiblePlaybook playbook: "${ANSIBLE_PLAYBOOK}", inventory: "${ANSIBLE_INVENTORY}", extraVars: [
-                        "ansible_user": "${ANSIBLE_USER}",
-                        "ansible_password": "${ANSIBLE_PASSWORD}",
-                        "server_ip": "${SERVER_IP}",
-                        "workspace": "${WORKSPACE}"
-                    ]
+                    script {
+                        def ansibleHome = tool name: "${ANSIBLE_NAME}"
+                        sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
+                    }
                 }
             }
         }

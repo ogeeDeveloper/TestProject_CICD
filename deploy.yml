@@ -28,7 +28,12 @@
         content: |
           #!/bin/bash
           nohup java -jar /home/{{ ansible_user }}/webapp-runner.jar --port 8080 /home/{{ ansible_user }}/java-tomcat-sample.war > /home/{{ ansible_user }}/app.log 2>&1 &
-      mode: "0755"
+      become: yes
+
+    - name: Set execute permission on the run script
+      file:
+        path: /home/{{ ansible_user }}/run_app.sh
+        mode: "0755"
       become: yes
 
     - name: Start the application

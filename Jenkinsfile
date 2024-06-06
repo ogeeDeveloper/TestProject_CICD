@@ -67,15 +67,21 @@ pipeline {
                             sh "${TERRAFORM_BIN} init"
 
                             // Plan Terraform changes
-                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                            def planOutput = sh(script: "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}", returnStdout: true).trim()
 
-                            // Apply Terraform changes
-                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
-
-                            // Capture Terraform output
-                            def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
-                            def jsonOutput = readJSON text: output
-                            env.SERVER_IP = jsonOutput.app_server_ip.value
+                            if (planOutput.contains("No changes")) {
+                                // Capture Terraform output for the existing server
+                                def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
+                                def jsonOutput = readJSON text: output
+                                env.SERVER_IP = jsonOutput.app_server_ip.value
+                            } else {
+                                // Apply Terraform changes if necessary
+                                sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                                // Capture Terraform output
+                                def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
+                                def jsonOutput = readJSON text: output
+                                env.SERVER_IP = jsonOutput.app_server_ip.value
+                            }
                         }
                     }
                 }

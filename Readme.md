@@ -238,6 +238,14 @@ Create an Ansible playbook file named `setup_tools.yml`:
 ```
 
 - Run the ansible: `ansible-playbook -i localhost, -c local -u deployer --become --private-key /root/.ssh/id_rsa /root/cicd/setup_tools.yml`
+- Install `sshpass` on the Jenkins Container to use the 'ssh' connection type with passwords:
+
+  ```bash
+  docker exec -it jenkins bash
+  apt-get update
+  apt-get install -y sshpass
+
+  ```
 
 ![alt text](image-7.png)
 

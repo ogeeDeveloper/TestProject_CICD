@@ -17,7 +17,11 @@ pipeline {
         }
         stage('Checkout SCM') {
             steps {
-                git branch: 'master', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
+                checkout([$class: 'GitSCM', branches: [[name: '*/master']],
+                          doGenerateSubmoduleConfigurations: false,
+                          extensions: [[$class: 'CleanBeforeCheckout']], // Clean workspace before checkout
+                          submoduleCfg: [],
+                          userRemoteConfigs: [[url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', credentialsId: 'your-git-credentials-id']]])
             }
         }
         stage('Build') {

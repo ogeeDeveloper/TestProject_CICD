@@ -4,6 +4,10 @@
     ansible_user: "deployer"
     server_ip: "{{ server_ip }}"
   tasks:
+    - name: Ensure the system is updated
+      apt:
+        update_cache: yes
+
     - name: Ensure Java is installed
       apt:
         name: openjdk-11-jdk

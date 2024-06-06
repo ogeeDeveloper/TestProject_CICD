@@ -20,7 +20,7 @@ resource "digitalocean_droplet" "app_server" {
 
   provisioner "remote-exec" {
     inline = [
-      "apt-get update",
+      "apt-get update && apt-get upgrade -y",
       "apt-get install -y sshpass",
       "useradd -m -s /bin/bash deployer",
       "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",

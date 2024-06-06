@@ -32,11 +32,17 @@
         dest: /home/{{ ansible_user }}/java-tomcat-sample.war
       become: yes
 
+    - name: Create a script to run the application
+      copy:
+        dest: /home/{{ ansible_user }}/run_app.sh
+        content: |
+          #!/bin/bash
+          nohup java -jar /home/{{ ansible_user }}/java-tomcat-sample.war > /home/{{ ansible_user }}/app.log 2>&1 &
+      mode: "0755"
+      become: yes
+
     - name: Run the application
-      shell: |
-        nohup java -jar /home/{{ ansible_user }}/java-tomcat-sample.war > /dev/null 2>&1 &
-      args:
-        chdir: /home/{{ ansible_user }}
+      shell: /home/{{ ansible_user }}/run_app.sh
       become: yes
 
     - name: Wait for the application to start
@@ -49,11 +55,21 @@
       failed_when: app_status.rc != 0
       become: yes
 
+    - name: Print application logs
+      shell: cat /home/{{ ansible_user }}/app.log
+      register: app_log
+      become: yes
+
+    - debug:
+        var: app_log.stdout_lines
+
     - name: Verify application deployment
       uri:
         url: "http://{{ server_ip }}:8080/"
         return_content: yes
       register: response
+      retries: 5
+      delay: 15
 
     - name: Check if application responded successfully
       assert:

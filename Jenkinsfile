@@ -63,20 +63,22 @@ pipeline {
                             // Initialize Terraform
                             sh "${TERRAFORM_BIN} init"
 
-                            // Plan and Apply Terraform changes
-                            def planOutput = sh(script: "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH}", returnStdout: true).trim()
+                            // Check if the droplet already exists
+                            def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
+                            def jsonOutput = readJSON text: output
 
-                            if (planOutput.contains("No changes")) {
-                                // Capture Terraform output for the existing server
-                                def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
-                                def jsonOutput = readJSON text: output
+                            if (jsonOutput?.app_server_ip?.value) {
+                                // Use existing droplet
                                 env.SERVER_IP = jsonOutput.app_server_ip.value
+                                echo "Using existing droplet with IP: ${env.SERVER_IP}"
                             } else {
-                                // Apply Terraform changes if necessary
-                                sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH}"
+                                // Plan and Apply Terraform changes
+                                sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                                sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+
                                 // Capture Terraform output
-                                def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
-                                def jsonOutput = readJSON text: output
+                                output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
+                                jsonOutput = readJSON text: output
                                 env.SERVER_IP = jsonOutput.app_server_ip.value
                             }
                         }
@@ -107,7 +109,7 @@ pipeline {
                         sh "export PATH=${ansibleHome}/bin:\$PATH"
                         sh "echo 'Ansible Home: ${ansibleHome}'"
                         sh "ls -l ${ansibleHome}/bin"
-                        sh "${ansibleHome}/bin/ansible-playbook setup_droplet.yml -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
+                        sh "${ansibleHome}/bin/ansible-playbook setup_droplet.yml -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
                     }
                 }
             }
@@ -128,15 +130,6 @@ pipeline {
                 }
             }
         }
-        /* Commenting out DAST with OWASP ZAP for now
-        stage('DAST with OWASP ZAP') {
-            steps {
-                script {
-                    zapAttack target: 'http://test-environment-url'
-                }
-            }
-        }
-        */
         stage('Deploy to Production') {
             steps {
                 script {

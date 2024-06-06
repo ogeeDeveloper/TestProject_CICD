@@ -1,8 +1,3 @@
-variable "ssh_private_key_path" {
-  description = "The path to the SSH private key"
-  type        = string
-}
-
 provider "digitalocean" {
   token = var.do_token
 }

@@ -50,11 +50,6 @@ pipeline {
                 }
             }
         }
-        stage('Prometheus Metrics') {
-            steps {
-                prometheus()
-            }
-        }
         stage('Infrastructure Provisioning') {
             steps {
                 dir("${TERRAFORM_DIR}") {
@@ -103,6 +98,13 @@ pipeline {
                         echo "Deployment time: ${(end - start) / 1000} seconds"
 
                     }
+                }
+            }
+        }
+         stage('Expose Prometheus Metrics') {
+            steps {
+                script {
+                    sh 'curl -X POST http://164.90.138.210:8080/prometheus/metrics'
                 }
             }
         }

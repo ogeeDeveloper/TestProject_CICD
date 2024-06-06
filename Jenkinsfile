@@ -50,6 +50,11 @@ pipeline {
                 }
             }
         }
+        stage('Prometheus Metrics') {
+            steps {
+                prometheus()
+            }
+        }
         stage('Infrastructure Provisioning') {
             steps {
                 dir("${TERRAFORM_DIR}") {

@@ -1,3 +1,8 @@
+variable "ssh_private_key_path" {
+  description = "The path to the SSH private key"
+  type        = string
+}
+
 provider "digitalocean" {
   token = var.do_token
 }
@@ -7,28 +12,20 @@ resource "digitalocean_droplet" "app_server" {
   name   = "app-server"
   region = "nyc3"
   size   = "s-1vcpu-1gb"
-  ssh_keys = [
-    var.ssh_key_id
-  ]
+  ssh_keys = [var.ssh_key_id]
+  private_networking = true
 
   connection {
     type        = "ssh"
     user        = "root"
     private_key = file(var.ssh_private_key_path)
-    timeout     = "2m"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "apt-get update",
-      "apt-get install -y python3 python3-pip"
+      "apt-get update -y",
+      "apt-get install -y openjdk-11-jdk"
     ]
-  }
-
-  provisioner "local-exec" {
-    command = <<EOF
-    ansible-playbook -i '${self.ipv4_address},' --private-key ${var.ssh_private_key_path} setup_droplet.yml
-    EOF
   }
 }
 

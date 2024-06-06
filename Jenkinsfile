@@ -59,10 +59,10 @@ pipeline {
                             sh "${TERRAFORM_BIN} init"
 
                             // Plan Terraform changes
-                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH} -var ssh_public_key=${SSH_PUBLIC_KEY}"
+                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key=${SSH_PRIVATE_KEY_PATH} -var ssh_public_key=${SSH_PUBLIC_KEY}"
 
                             // Apply Terraform changes
-                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH} -var ssh_public_key=${SSH_PUBLIC_KEY}"
+                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key=${SSH_PRIVATE_KEY_PATH} -var ssh_public_key=${SSH_PUBLIC_KEY}"
 
                             // Capture Terraform output
                             def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()

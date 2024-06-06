@@ -12,6 +12,17 @@
         done
       become: yes
 
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      become: yes
+
+    - name: Fix and clean broken packages
+      shell: |
+        sudo dpkg --configure -a
+        sudo apt-get install -f
+      become: yes
+
     - name: Ensure Java is installed
       apt:
         name: openjdk-11-jdk

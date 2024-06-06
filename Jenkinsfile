@@ -4,24 +4,19 @@ pipeline {
         MAVEN_PROJECT_DIR = 'java-tomcat-sample'
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_PLAYBOOK = 'deploy.yml'
-        ANSIBLE_INVENTORY = 'inventory.ini'
         SONAR_TOKEN = credentials('SonarQubeServerToken')
         TERRAFORM_BIN = '/usr/local/bin/terraform'
-        ANSIBLE_NAME = 'Ansible' // Reference to the Ansible tool configured in Jenkins
+        ANSIBLE_NAME = 'Ansible'
     }
     stages {
-        stage('Cleanup Workspace') {
+        stage('Cleanup') {
             steps {
                 deleteDir()
             }
         }
         stage('Checkout SCM') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']],
-                          doGenerateSubmoduleConfigurations: false,
-                          extensions: [[$class: 'CleanBeforeCheckout']], // Clean workspace before checkout
-                          submoduleCfg: [],
-                          userRemoteConfigs: [[url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git', credentialsId: 'your-git-credentials-id']]])
+                git branch: 'dev', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
             }
         }
         stage('Build') {
@@ -60,17 +55,19 @@ pipeline {
                 dir("${TERRAFORM_DIR}") {
                     withCredentials([
                         string(credentialsId: 'do_token', variable: 'DO_TOKEN'),
-                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID')
+                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID'),
+                        sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', usernameVariable: 'SSH_USER'),
+                        string(credentialsId: 'ssh_public_key', variable: 'SSH_PUBLIC_KEY')
                     ]) {
                         script {
                             // Initialize Terraform
                             sh "${TERRAFORM_BIN} init"
 
                             // Plan Terraform changes
-                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                            sh "${TERRAFORM_BIN} plan -var 'do_token=${DO_TOKEN}' -var 'ssh_key_id=${SSH_KEY_ID}' -var 'ssh_private_key=${SSH_PRIVATE_KEY_PATH}' -var 'ssh_public_key=${SSH_PUBLIC_KEY}'"
 
                             // Apply Terraform changes
-                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                            sh "${TERRAFORM_BIN} apply -auto-approve -var 'do_token=${DO_TOKEN}' -var 'ssh_key_id=${SSH_KEY_ID}' -var 'ssh_private_key=${SSH_PRIVATE_KEY_PATH}' -var 'ssh_public_key=${SSH_PUBLIC_KEY}'"
 
                             // Capture Terraform output
                             def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()
@@ -81,48 +78,19 @@ pipeline {
                 }
             }
         }
-        stage('Update Inventory') {
-            steps {
-                script {
-                    writeFile file: "${ANSIBLE_INVENTORY}", text: """
-                        [app_servers]
-                        ${SERVER_IP} ansible_user=deployer ansible_ssh_private_key_file=/root/.ssh/id_rsa
-
-                        [all:vars]
-                        ansible_python_interpreter=/usr/bin/python3
-                    """
-                }
-            }
-        }
         stage('Deploy Application') {
             steps {
                 withCredentials([
                     string(credentialsId: 'ansible_password', variable: 'ANSIBLE_PASSWORD'),
-                    sshUserPrivateKey(credentialsId: 'ansible_ssh_key', keyFileVariable: 'SSH_KEY_FILE', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
+                    sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_KEY_FILE', passphraseVariable: '', usernameVariable: 'ANSIBLE_USER')
                 ]) {
                     script {
                         def ansibleHome = tool name: "${ANSIBLE_NAME}"
                         sh "export PATH=${ansibleHome}/bin:\$PATH"
                         sh "echo 'Ansible Home: ${ansibleHome}'"
-                        sh "ls -l ${ansibleHome}/bin"
-                        sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
+                        sh "echo '[app_servers]\n${SERVER_IP}' > dynamic_inventory.ini"
+                        sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i dynamic_inventory.ini -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
                     }
-                }
-            }
-        }
-        /* Commenting out DAST with OWASP ZAP for now
-        stage('DAST with OWASP ZAP') {
-            steps {
-                script {
-                    zapAttack target: 'http://test-environment-url'
-                }
-            }
-        }
-        */
-        stage('Deploy to Production') {
-            steps {
-                script {
-                    echo 'Deploying to production...'
                 }
             }
         }

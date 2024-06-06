@@ -11,27 +11,41 @@ provider "digitalocean" {
   token = var.do_token
 }
 
-data "digitalocean_droplet" "existing_droplet" {
-  name   = "app-server"
-  count  = 0
-}
-
 resource "digitalocean_droplet" "app_server" {
-  count     = length(data.digitalocean_droplet.existing_droplet) == 0 ? 1 : 0
-  image     = "ubuntu-20-04-x64"
-  name      = "app-server"
-  region    = "nyc3"
-  size      = "s-1vcpu-1gb"
-  monitoring = true
-  ssh_keys  = [var.ssh_key_id]
-}
+  image    = "ubuntu-20-04-x64"
+  name     = "app-server"
+  region   = "nyc3"
+  size     = "s-1vcpu-1gb"
+  ssh_keys = [var.ssh_key_id]
 
-locals {
-  existing_droplet_count = length(data.digitalocean_droplet.existing_droplet)
-  existing_droplet_ids   = data.digitalocean_droplet.existing_droplet.*.id
-  existing_droplet_ip    = length(data.digitalocean_droplet.existing_droplet) > 0 ? data.digitalocean_droplet.existing_droplet[0].ipv4_address : ""
+  provisioner "remote-exec" {
+    inline = [
+      "apt-get update && apt-get upgrade -y",
+      "apt-get install -y sshpass",
+      "useradd -m -s /bin/bash deployer",
+      "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+      "mkdir -p /home/deployer/.ssh",
+      "echo '${var.ssh_public_key}' > /home/deployer/.ssh/authorized_keys",
+      "chown -R deployer:deployer /home/deployer/.ssh",
+      "chmod 700 /home/deployer/.ssh",
+      "chmod 600 /home/deployer/.ssh/authorized_keys"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "root"
+      private_key = file(var.ssh_private_key)
+      host        = self.ipv4_address
+    }
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      ssh-keyscan -H ${self.ipv4_address} >> ~/.ssh/known_hosts
+    EOF
+  }
 }
 
 output "app_server_ip" {
-  value = local.existing_droplet_count > 0 ? local.existing_droplet_ip : digitalocean_droplet.app_server[0].ipv4_address
+  value = digitalocean_droplet.app_server.ipv4_address
 }

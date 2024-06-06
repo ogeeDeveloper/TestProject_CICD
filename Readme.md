@@ -65,6 +65,12 @@ output "app_server_ip" {
 
 ![alt text](image.png)
 
+**_Explanation_**:
+
+- This file contains the main Terraform configuration. It sets up a DigitalOcean droplet if one does not already exist. If a droplet already exists, it retrieves its details instead of creating a new one.
+- The locals block determines whether to use an existing droplet's IP address or the newly created one.
+- The output block provides the IP address of the app server.
+
 `variables.tf`
 
 ```hcl
@@ -78,6 +84,10 @@ variable "ssh_key_id" {
   type        = string
 }
 ```
+
+**_Explanation_**:
+
+- This file defines the variables required for the Terraform configuration, including the DigitalOcean API token and SSH key ID.
 
 ![alt text](image-1.png)
 
@@ -238,6 +248,7 @@ Create an Ansible playbook file named `setup_tools.yml`:
 ```
 
 - Run the ansible: `ansible-playbook -i localhost, -c local -u deployer --become --private-key /root/.ssh/id_rsa /root/cicd/setup_tools.yml`
+-
 - Install `sshpass` on the Jenkins Container to use the 'ssh' connection type with passwords:
 
   ```bash
@@ -399,5 +410,15 @@ You need to authenticate doctl with your DigitalOcean API token. Here’s how:
    - In the Pipeline configuration, scroll down to the Pipeline section.
    - Set the Definition to Pipeline script from SCM.
    - Set SCM to Git.
-   - Provide the repository URL (e.g., https://github.com/ogeeDeveloper/Jenkins_Upgradev3.git).
+   - Provide the repository URL (e.g., https://github.com/ogeeDeveloper/TestProject_CICD.git).
    - Set the Script Path to Jenkinsfile.
+
+## Repository Files Explanation
+
+### Jenkinsfile
+
+This file can be found in the Jenkins_Output.txt
+
+Time it takes to provision the deployment server with terraform
+
+![alt text](image-26.png)

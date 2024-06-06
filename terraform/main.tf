@@ -17,6 +17,26 @@ resource "digitalocean_droplet" "app_server" {
   region   = "nyc3"
   size     = "s-1vcpu-1gb"
   ssh_keys = [var.ssh_key_id]
+
+  provisioner "remote-exec" {
+    inline = [
+      "apt-get update",
+      "apt-get install -y sshpass",
+      "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+      "mkdir -p /home/deployer/.ssh",
+      "echo '${var.ssh_public_key}' >> /home/deployer/.ssh/authorized_keys",
+      "chown -R deployer:deployer /home/deployer/.ssh",
+      "chmod 700 /home/deployer/.ssh",
+      "chmod 600 /home/deployer/.ssh/authorized_keys"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "root"
+      private_key = file(var.ssh_private_key)
+      host        = self.ipv4_address
+    }
+  }
 }
 
 output "app_server_ip" {

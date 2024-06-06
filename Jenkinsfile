@@ -4,7 +4,6 @@ pipeline {
         MAVEN_PROJECT_DIR = 'java-tomcat-sample'
         TERRAFORM_DIR = 'terraform'
         ANSIBLE_PLAYBOOK = 'deploy.yml'
-        ANSIBLE_INVENTORY = 'inventory.ini'
         SONAR_TOKEN = credentials('SonarQubeServerToken')
         TERRAFORM_BIN = '/usr/local/bin/terraform'
         ANSIBLE_NAME = 'Ansible'
@@ -51,17 +50,19 @@ pipeline {
                 dir("${TERRAFORM_DIR}") {
                     withCredentials([
                         string(credentialsId: 'do_token', variable: 'DO_TOKEN'),
-                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID')
+                        string(credentialsId: 'ssh_key_id', variable: 'SSH_KEY_ID'),
+                        sshUserPrivateKey(credentialsId: 'ssh_private_key', keyFileVariable: 'SSH_PRIVATE_KEY_PATH', usernameVariable: 'SSH_USER'),
+                        string(credentialsId: 'ssh_public_key', variable: 'SSH_PUBLIC_KEY')
                     ]) {
                         script {
                             // Initialize Terraform
                             sh "${TERRAFORM_BIN} init"
 
                             // Plan Terraform changes
-                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                            sh "${TERRAFORM_BIN} plan -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH} -var ssh_public_key=${SSH_PUBLIC_KEY}"
 
                             // Apply Terraform changes
-                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID}"
+                            sh "${TERRAFORM_BIN} apply -auto-approve -var do_token=${DO_TOKEN} -var ssh_key_id=${SSH_KEY_ID} -var ssh_private_key_path=${SSH_PRIVATE_KEY_PATH} -var ssh_public_key=${SSH_PUBLIC_KEY}"
 
                             // Capture Terraform output
                             def output = sh(script: "${TERRAFORM_BIN} output -json", returnStdout: true).trim()

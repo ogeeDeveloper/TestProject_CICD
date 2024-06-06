@@ -10,6 +10,11 @@ pipeline {
         ANSIBLE_NAME = 'Ansible' // Reference to the Ansible tool configured in Jenkins
     }
     stages {
+        stage('Cleanup Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
         stage('Checkout SCM') {
             steps {
                 git branch: 'master', url: 'https://github.com/ogeeDeveloper/TestProject_CICD.git'
@@ -80,12 +85,10 @@ pipeline {
                 ]) {
                     script {
                         def ansibleHome = tool name: "${ANSIBLE_NAME}"
-                        withEnv(["PATH+ANSIBLE=${ansibleHome}/bin"]) {
-                            sh "echo 'Ansible Home: ${ansibleHome}'"
-                            sh "ls -l ${ansibleHome}/bin"
-                            sh "ansible --version"
-                            sh "ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
-                        }
+                        sh "export PATH=${ansibleHome}/bin:\$PATH"
+                        sh "echo 'Ansible Home: ${ansibleHome}'"
+                        sh "ls -l ${ansibleHome}/bin"
+                        sh "${ansibleHome}/bin/ansible-playbook ${ANSIBLE_PLAYBOOK} -i ${ANSIBLE_INVENTORY} -e ansible_user=${ANSIBLE_USER} -e ansible_password=${ANSIBLE_PASSWORD} -e server_ip=${SERVER_IP} -e workspace=${WORKSPACE}"
                     }
                 }
             }

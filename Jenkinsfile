@@ -7,6 +7,7 @@ pipeline {
         SONAR_TOKEN = credentials('SonarQubeServerToken')
         TERRAFORM_BIN = '/usr/local/bin/terraform'
         ANSIBLE_NAME = 'Ansible'
+        ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
     stages {
         stage('Verify Environment') {

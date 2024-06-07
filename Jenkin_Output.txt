@@ -8,8 +8,15 @@ pipeline {
         SONAR_TOKEN = credentials('SonarQubeServerToken')
         TERRAFORM_BIN = '/usr/local/bin/terraform'
         ANSIBLE_NAME = 'Ansible'
+        ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
     stages {
+        stage('Verify Environment') {
+            steps {
+                sh 'echo $PATH'
+                sh 'terraform --version'
+            }
+        }
         stage('Cleanup') {
             steps {
                 deleteDir()
@@ -98,7 +105,7 @@ pipeline {
     }
     post {
         always {
-            junit '**/target/surefire-reports/*.xml'
+            // junit '**/target/surefire-reports/*.xml'
             script {
                 if (currentBuild.currentResult == 'SUCCESS') {
                     echo 'Build succeeded!'
@@ -109,6 +116,7 @@ pipeline {
         }
     }
 }
+
 ```
 
 **_Explanation:_**

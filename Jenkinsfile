@@ -9,6 +9,12 @@ pipeline {
         ANSIBLE_NAME = 'Ansible'
     }
     stages {
+        stage('Verify Environment') {
+            steps {
+                sh 'echo $PATH'
+                sh 'terraform --version'
+            }
+        }
         stage('Cleanup') {
             steps {
                 deleteDir()

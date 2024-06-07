@@ -133,10 +133,12 @@ Create an Ansible playbook file named `setup_tools.yml`:
 - hosts: localhost
   become: yes
   vars:
-    ansible_user: "deployer" # Replace with the actual user
+    ansible_user: "deployer"
+    ssh_key_path: "/root/.ssh/id_rsa"
   tasks:
     - name: Update apt cache
-      apt: update_cache=yes
+      apt:
+        update_cache: yes
 
     - name: Install Docker
       apt:
@@ -164,25 +166,58 @@ Create an Ansible playbook file named `setup_tools.yml`:
         mode: "0755"
       with_items:
         - /opt/jenkins
-        - /opt/sonarqube
-        - /opt/grafana
-        - /opt/prometheus
+        - /opt/sonarqube/data
+        - /opt/grafana/data
+        - /opt/grafana/provisioning/datasources
+        - /opt/prometheus/data
 
-    - name: Create Docker Compose file for Jenkins
+    - name: Ensure the Docker network exists
+      shell: |
+        if ! docker network ls | grep -q cicd_network; then
+          docker network create cicd_network
+        fi
+
+    - name: Create Prometheus configuration file
       copy:
-        dest: /opt/jenkins/docker-compose.yml
+        dest: /opt/prometheus/prometheus.yml
         content: |
-          version: '3'
-          services:
-            jenkins:
-              image: jenkins/jenkins:lts
-              container_name: jenkins
-              ports:
-                - "8080:8080"
-                - "50000:50000"
-              volumes:
-                - /opt/jenkins/jenkins_home:/var/jenkins_home
-                - /var/run/docker.sock:/var/run/docker.sock
+          global:
+            scrape_interval: 15s
+
+          scrape_configs:
+            - job_name: 'jenkins'
+              static_configs:
+                - targets: ['jenkins:8080']
+
+    - name: Create Grafana provisioning file for Prometheus
+      copy:
+        dest: /opt/grafana/provisioning/datasources/prometheus.yml
+        content: |
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              url: http://prometheus:9090
+              isDefault: true
+
+    - name: Run Jenkins container with required settings
+      shell: |
+        docker stop jenkins || true
+        docker rm jenkins || true
+        docker run -d -u root --privileged=true \
+          --network cicd_network \
+          --volume /opt/jenkins/jenkins_home:/var/jenkins_home \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v "{{ ssh_key_path }}:/root/.ssh/id_rsa" \
+          -p 8080:8080 -p 50000:50000 --name jenkins jenkins/jenkins:lts
+
+    - name: Install Terraform in Jenkins container
+      shell: |
+        docker exec -u root jenkins bash -c "apt-get update && apt-get install -y wget unzip && \
+        wget https://releases.hashicorp.com/terraform/1.1.5/terraform_1.1.5_linux_amd64.zip && \
+        unzip terraform_1.1.5_linux_amd64.zip && mv terraform /usr/local/bin/ && \
+        rm terraform_1.1.5_linux_amd64.zip"
 
     - name: Create Docker Compose file for SonarQube
       copy:
@@ -194,9 +229,14 @@ Create an Ansible playbook file named `setup_tools.yml`:
               image: sonarqube
               container_name: sonarqube
               ports:
-                - "9000:9000"
+                - "0.0.0.0:9000:9000"
+              networks:
+                - cicd_network
               volumes:
-                - /opt/sonarqube/data:/opt/sonarqube/data
+                - /opt/sonarqube/data/sonarqube-data:/opt/sonarqube/data
+          networks:
+            cicd_network:
+              external: true
 
     - name: Create Docker Compose file for Grafana
       copy:
@@ -208,9 +248,15 @@ Create an Ansible playbook file named `setup_tools.yml`:
               image: grafana/grafana
               container_name: grafana
               ports:
-                - "3000:3000"
+                - "0.0.0.0:3000:3000"
+              networks:
+                - cicd_network
               volumes:
                 - /opt/grafana/data:/var/lib/grafana
+                - /opt/grafana/provisioning:/etc/grafana/provisioning
+          networks:
+            cicd_network:
+              external: true
 
     - name: Create Docker Compose file for Prometheus
       copy:
@@ -222,14 +268,15 @@ Create an Ansible playbook file named `setup_tools.yml`:
               image: prom/prometheus
               container_name: prometheus
               ports:
-                - "9090:9090"
+                - "0.0.0.0:9090:9090"
+              networks:
+                - cicd_network
               volumes:
                 - /opt/prometheus/data:/prometheus
-
-    - name: Start Jenkins
-      command: docker-compose up -d
-      args:
-        chdir: /opt/jenkins
+                - /opt/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+          networks:
+            cicd_network:
+              external: true
 
     - name: Start SonarQube
       command: docker-compose up -d
@@ -245,7 +292,32 @@ Create an Ansible playbook file named `setup_tools.yml`:
       command: docker-compose up -d
       args:
         chdir: /opt/prometheus
+
+    - name: Restart Jenkins
+      shell: docker restart jenkins
 ```
+
+### Explanation
+
+- Update apt cache: Updates the apt package cache.
+- Install Docker: Installs Docker.
+- Install Docker Compose: Installs Docker Compose.
+- Set permissions for Docker Compose: Sets the permissions for Docker Compose.
+- Start Docker service: Starts and enables the Docker service.
+- Create directories for tools: Creates the necessary directories for Jenkins, SonarQube, Grafana, and Prometheus.
+- Create a common Docker network: Creates a common Docker network for the containers.
+- Create Prometheus configuration file: Creates the configuration file for Prometheus.
+- Create Grafana provisioning file for Prometheus: Creates the provisioning file for Grafana to use Prometheus.
+- Ensure the Docker network exists: This block checks if the Docker network cicd_network exists before attempting to create it, avoiding errors due to the network already existing.
+- Run Jenkins container with required settings: Runs the Jenkins container with the specified settings.
+- Install Terraform in Jenkins container: Installs Terraform within the Jenkins container to ensure it persists across restarts.
+- Create Docker Compose file for SonarQube: Creates the Docker Compose file for SonarQube.
+- Create Docker Compose file for Grafana: Creates the Docker Compose file for Grafana.
+- Create Docker Compose file for Prometheus: Creates the Docker Compose file for Prometheus.
+- Start SonarQube: Starts the SonarQube container.
+- Start Grafana: Starts the Grafana container.
+- Start Prometheus: Starts the Prometheus container.
+- Restart Jenkins: Restarts the Jenkins container to apply any changes.
 
 ### Running the Playbook
 

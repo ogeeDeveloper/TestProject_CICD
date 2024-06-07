@@ -52,5 +52,8 @@ resource "digitalocean_droplet" "app_server" {
 }
 
 output "app_server_ip" {
-  value = coalesce(data.digitalocean_droplet.existing.ipv4_address, digitalocean_droplet.app_server.*.ipv4_address[0])
+  value = coalesce(
+    data.digitalocean_droplet.existing.ipv4_address, 
+    try(digitalocean_droplet.app_server[0].ipv4_address, null)
+  )
 }

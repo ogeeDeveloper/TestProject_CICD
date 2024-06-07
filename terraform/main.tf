@@ -16,7 +16,7 @@ data "digitalocean_droplet" "existing" {
 }
 
 resource "digitalocean_droplet" "app_server" {
-  count = length(data.digitalocean_droplet.existing.id) == 0 ? 1 : 0
+  count = data.digitalocean_droplet.existing.id == "" ? 1 : 0
   image    = "ubuntu-20-04-x64"
   name     = "app-server"
   region   = "nyc3"
@@ -52,5 +52,5 @@ resource "digitalocean_droplet" "app_server" {
 }
 
 output "app_server_ip" {
-  value = coalesce(data.digitalocean_droplet.existing.ipv4_address, digitalocean_droplet.app_server[0].ipv4_address)
+  value = coalesce(data.digitalocean_droplet.existing.ipv4_address, digitalocean_droplet.app_server.*.ipv4_address[0])
 }

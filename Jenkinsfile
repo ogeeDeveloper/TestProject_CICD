@@ -97,7 +97,7 @@ pipeline {
     }
     post {
         always {
-            junit '**/target/surefire-reports/*.xml'
+            // junit '**/target/surefire-reports/*.xml'
             script {
                 if (currentBuild.currentResult == 'SUCCESS') {
                     echo 'Build succeeded!'

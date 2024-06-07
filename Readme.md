@@ -247,16 +247,64 @@ Create an Ansible playbook file named `setup_tools.yml`:
         chdir: /opt/prometheus
 ```
 
-- Run the ansible: `ansible-playbook -i localhost, -c local -u deployer --become --private-key /root/.ssh/id_rsa /root/cicd/setup_tools.yml`
--
+### Running the Playbook
+
+- Run the Ansible playbook with the following command:: `ansible-playbook -i localhost, -c local -u deployer --become --private-key /root/.ssh/id_rsa /root/cicd/setup_tools.yml`
+
+### Configuring Prometheus to Scrape Jenkins Metrics
+
+Edit the Prometheus configuration file `/opt/prometheus/prometheus.yml` to include the Jenkins target:
+
+```yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "jenkins"
+    static_configs:
+      - targets: ["jenkins:8080"]
+```
+
+Restart the Prometheus container to apply the changes:
+
+```bash
+docker restart prometheus
+
+```
+
+### Creating a Shared Network for Docker Containers
+
+To create a shared network for all the containers:
+
+```bash
+docker network create shared_network
+
+```
+
+Ensure all services are connected to this network by adding networks: - shared_network in their respective Docker Compose files, as shown in the playbook.
+
 - Install `sshpass` on the Jenkins Container to use the 'ssh' connection type with passwords:
 
-  ```bash
-  docker exec -it jenkins bash
-  apt-get update
-  apt-get install -y sshpass
+### Verifying Connectivity and Monitoring
 
-  ```
+1. Check Prometheus Targets:
+   Access Prometheus at `http://<your-server-ip>:9090/`targets and verify that the Jenkins target is UP.
+
+2. Set Up Grafana Dashboards:
+   - Access Grafana at http://<your-server-ip>:3000.
+   - Add Prometheus as a data source and configure it to point to http://prometheus:9090.
+   - Import Jenkins monitoring dashboards or create custom dashboards to visualize the metrics.
+
+This setup ensures that Jenkins, Prometheus, Grafana, and SonarQube are properly installed and configured to communicate within a shared Docker network. By following these steps, you should be able to monitor Jenkins jobs and performance metrics effectively.
+
+Installing `sshpass` in order to ssh in the deployable machines from Jenkins server.
+
+```bash
+docker exec -it jenkins bash
+apt-get update
+apt-get install -y sshpass
+
+```
 
 ![alt text](image-7.png)
 

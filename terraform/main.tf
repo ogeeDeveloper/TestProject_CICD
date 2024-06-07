@@ -11,7 +11,12 @@ provider "digitalocean" {
   token = var.do_token
 }
 
+data "digitalocean_droplet" "existing" {
+  name = "app-server"
+}
+
 resource "digitalocean_droplet" "app_server" {
+  count = length(data.digitalocean_droplet.existing.id) == 0 ? 1 : 0
   image    = "ubuntu-20-04-x64"
   name     = "app-server"
   region   = "nyc3"
@@ -47,5 +52,5 @@ resource "digitalocean_droplet" "app_server" {
 }
 
 output "app_server_ip" {
-  value = digitalocean_droplet.app_server.ipv4_address
+  value = coalesce(data.digitalocean_droplet.existing.ipv4_address, digitalocean_droplet.app_server.ipv4_address)
 }

@@ -1,5 +1,28 @@
 # Installation and Setup Guide
 
+## Table of Contents
+
+- [Installation and Setup Guide](#installation-and-setup-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Prerequisites](#prerequisites)
+- [Step 1: Provision and Configure the Primary Host](#step-1-provision-and-configure-the-primary-host)
+  - [Terraform Configuration for Primary Host](#terraform-configuration-for-primary-host)
+  - [Step-by-Step Guide to Determine and Set ansible_user](#step-by-step-guide-to-determine-and-set-ansible_user)
+  - [Ansible Playbook for Setting Up Tools](#ansible-playbook-for-setting-up-tools)
+    - [Explanation](#explanation)
+    - [Running the Playbook](#running-the-playbook)
+    - [Configuring Prometheus to Scrape Jenkins Metrics](#configuring-prometheus-to-scrape-jenkins-metrics)
+    - [Creating a Shared Network for Docker Containers](#creating-a-shared-network-for-docker-containers)
+    - [Verifying Connectivity and Monitoring](#verifying-connectivity-and-monitoring)
+- [Configure Digital SSH](#configure-digital-ssh)
+- [Configure Jenkins](#configure-jenkins)
+- [Step 3: Install Additional Plugins](#step-3-install-additional-plugins)
+- [Step 4: Configure Global Tools](#step-4-configure-global-tools)
+- [Step 5: Create Jenkins Pipeline](#step-5-create-jenkins-pipeline)
+  - [Repository Files Explanation](#repository-files-explanation)
+    - [Jenkinsfile](#jenkinsfile)
+
 ## Overview
 
 This guide provides detailed steps to:
@@ -684,7 +707,7 @@ pipeline {
 
 - This is the Jenkins pipeline script that defines the CI/CD process. It includes stages for cleaning up the workspace, checking out the source code, building the application, performing SonarQube analysis, provisioning infrastructure with Terraform, and deploying the application using Ansible.
 
-This file can be found in the Jenkins_Output.txt
+The Job pipeline can be found in the Jenkins_Output.txt
 
 Time it takes to provision the deployment server with terraform
 

@@ -22,6 +22,7 @@
 - [Step 5: Create Jenkins Pipeline](#step-5-create-jenkins-pipeline)
   - [Repository Files Explanation](#repository-files-explanation)
     - [Jenkinsfile](#jenkinsfile)
+    - [Terraform](#terraform)
 - [Closing Remarks](#closing-remarks)
 
 ## Overview
@@ -714,6 +715,220 @@ The Job pipeline can be found in the Jenkins_Output.txt
 Time it takes to provision the deployment server with terraform
 
 ![alt text](image-26.png)
+
+### Terraform
+
+```hcl
+terraform {
+  required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 2.0"
+    }
+  }
+}
+
+provider "digitalocean" {
+  token = var.do_token
+}
+
+data "digitalocean_droplet" "existing" {
+  name = "app-server"
+}
+
+resource "digitalocean_droplet" "app_server" {
+  count = data.digitalocean_droplet.existing.id == "" ? 1 : 0
+  image    = "ubuntu-20-04-x64"
+  name     = "app-server"
+  region   = "nyc3"
+  size     = "s-1vcpu-1gb"
+  ssh_keys = [var.ssh_key_id]
+
+  provisioner "remote-exec" {
+    inline = [
+      "apt-get update && apt-get upgrade -y",
+      "apt-get install -y sshpass",
+      "useradd -m -s /bin/bash deployer",
+      "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+      "mkdir -p /home/deployer/.ssh",
+      "echo '${var.ssh_public_key}' > /home/deployer/.ssh/authorized_keys",
+      "chown -R deployer:deployer /home/deployer/.ssh",
+      "chmod 700 /home/deployer/.ssh",
+      "chmod 600 /home/deployer/.ssh/authorized_keys"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "root"
+      private_key = file(var.ssh_private_key)
+      host        = self.ipv4_address
+    }
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      ssh-keyscan -H ${self.ipv4_address} >> ~/.ssh/known_hosts
+    EOF
+  }
+}
+
+output "app_server_ip" {
+  value = coalesce(
+    data.digitalocean_droplet.existing.ipv4_address,
+    try(digitalocean_droplet.app_server[0].ipv4_address, null)
+  )
+}
+
+```
+
+**_ Explanation of Terraform Configuration_**
+This Terraform configuration script provisions and configures a DigitalOcean droplet. The script includes the following components:
+
+- Terraform block: Specifies the required provider.
+- Provider block: Configures the DigitalOcean provider with an API token.
+- Data block: Fetches an existing droplet, if it exists.
+- Resource block: Defines the droplet to be created if it doesn't already exist.
+- Provisioners: Executes commands on the droplet for setup and configuration.
+- Output block: Retrieves and outputs the IP address of the droplet.
+
+Detailed Breakdown
+
+1. Terraform Block
+
+   ```hcl
+   terraform {
+   required_providers {
+    digitalocean = {
+      source  = "digitalocean/digitalocean"
+      version = "~> 2.0"
+    }
+   }
+   }
+
+   ```
+
+- Purpose: Specifies that the configuration requires the DigitalOcean provider.
+- Components:
+  - `required_providers`: Defines the provider and its source.
+  - `digitalocean`: Specifies the source and version of the DigitalOcean provider.
+
+2. Provider Block
+
+   ```hcl
+   provider "digitalocean" {
+   token = var.do_token
+   }
+
+   ```
+
+- Purpose: Configures the DigitalOcean provider with the necessary authentication token.
+- Components:
+  - `token`: Uses a variable var.do_token to store the DigitalOcean API token securely.
+
+3. Data Block
+
+   ```hcl
+   data "digitalocean_droplet" "existing" {
+   name = "app-server"
+   }
+
+   ```
+
+- Purpose: Fetches information about an existing droplet named "app-server".
+- Components:
+  - name: Specifies the name of the droplet to fetch.
+
+4. Resource Block
+
+   ```hcl
+   resource "digitalocean_droplet" "app_server" {
+   count = data.digitalocean_droplet.existing.id == "" ? 1 : 0
+   image    = "ubuntu-20-04-x64"
+   name     = "app-server"
+   region   = "nyc3"
+   size     = "s-1vcpu-1gb"
+   ssh_keys = [var.ssh_key_id]
+
+    provisioner "remote-exec" {
+    inline = [
+    "apt-get update && apt-get upgrade -y",
+    "apt-get install -y sshpass",
+    "useradd -m -s /bin/bash deployer",
+    "echo 'deployer ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers",
+    "mkdir -p /home/deployer/.ssh",
+    "echo '${var.ssh_public_key}' > /home/deployer/.ssh/authorized_keys",
+    "chown -R deployer:deployer /home/deployer/.ssh",
+    "chmod 700 /home/deployer/.ssh",
+    "chmod 600 /home/deployer/.ssh/authorized_keys"
+    ]
+
+        connection {
+          type        = "ssh"
+          user        = "root"
+          private_key = file(var.ssh_private_key)
+          host        = self.ipv4_address
+        }
+
+    }
+
+    provisioner "local-exec" {
+    command = <<EOF
+    ssh-keyscan -H ${self.ipv4_address} >> ~/.ssh/known_hosts
+    EOF
+    }
+    }
+
+   ```
+
+- Purpose: Defines the droplet to be created and configures it using provisioners.
+
+- Components:
+
+- `count`: Determines whether to create a new droplet based on the existence of an existing one.
+- `image`: Specifies the OS image for the droplet.
+- `name`: Sets the name of the droplet.
+- `region`: Specifies the region where the droplet will be created.
+- `size`: Defines the size (resources) of the droplet.
+- `ssh_keys`: Uses a variable to provide the SSH key ID for authentication.
+
+- Provisioners:
+
+- **_Remote-Exec_**: Runs commands on the droplet after it is created.
+
+- **_Inline Commands_**:
+
+  - Updates and upgrades the system.
+  - Installs `sshpass`.
+  - Creates a user `deployer` and configures sudo privileges.
+  - Sets up the SSH key for the deployer user.
+
+- **_Connection_**: Specifies how to connect to the droplet
+
+- Uses SSH with the root user and private key.
+
+- Local-Exec: Executes a local command to add the droplet's IP to known hosts for SSH.
+- Ensures the new droplet's SSH fingerprint is recognized.
+
+5. **_Output Block_**
+
+```hcl
+output "app_server_ip" {
+value = coalesce(
+ data.digitalocean_droplet.existing.ipv4_address,
+ try(digitalocean_droplet.app_server[0].ipv4_address, null)
+)
+}
+
+
+```
+
+- **_Purpose_**: Provides the IP address of the app server.
+- Components
+  - `value`: Uses the coalesce function to choose the IP address of the existing droplet or the newly created one.
+  - Ensures that the output is the IP address of the app server, whether it was retrieved from an existing droplet or a newly created one.
+
+**_Summary_**
+This Terraform configuration script is designed to automate the provisioning and initial setup of a DigitalOcean droplet. It ensures that infrastructure is consistent and repeatable, which is a key aspect of Infrastructure as Code (IaC). The use of variables for sensitive information (like the DigitalOcean API token and SSH key) enhances security, and the provisioners automate essential setup tasks on the new droplet. The output block ensures easy retrieval of the droplet's IP address for further use in the CI/CD pipeline.
 
 # Closing Remarks
 

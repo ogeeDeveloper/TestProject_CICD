@@ -704,6 +704,7 @@ pipeline {
 ```
 
 **_Explanation:_**
+![alt text](image-27.png)
 
 - This is the Jenkins pipeline script that defines the CI/CD process. It includes stages for cleaning up the workspace, checking out the source code, building the application, performing SonarQube analysis, provisioning infrastructure with Terraform, and deploying the application using Ansible.
 

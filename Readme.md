@@ -22,6 +22,7 @@
 - [Step 5: Create Jenkins Pipeline](#step-5-create-jenkins-pipeline)
   - [Repository Files Explanation](#repository-files-explanation)
     - [Jenkinsfile](#jenkinsfile)
+- [Closing Remarks](#closing-remarks)
 
 ## Overview
 
@@ -713,3 +714,17 @@ The Job pipeline can be found in the Jenkins_Output.txt
 Time it takes to provision the deployment server with terraform
 
 ![alt text](image-26.png)
+
+# Closing Remarks
+
+The dissertation emphasizes the importance of integrating security and Infrastructure as Code (IaC) into the Software Development Life Cycle (SDLC) through the use of automation, particularly through the development and utilization of a CI/CD pipeline. Here's how the current implementation meets these requirements:
+
+1. Integration of DevSecOps and IaC: The setup incorporates Docker, Docker Compose, Jenkins, SonarQube, Prometheus, and Grafana, which collectively support the automation of security and infrastructure management. This approach is consistent with DevSecOps practices that integrate security into every phase of the development process.
+
+2. CI/CD Pipeline: The Docker Compose setup includes Jenkins for continuous integration and deployment, addressing the automation aspects crucial for your study. Jenkins, configured with both master and slave nodes, is essential for demonstrating the CI/CD pipeline in action, which is a core part of the research.
+
+3. Monitoring and Feedback: With Prometheus and Grafana integrated into your setup, you are equipped to monitor and analyze the metrics and performance of your CI/CD environment. This setup allows for continuous monitoring and feedback, which are vital for optimizing the SDLC and enhancing security and performance, as highlighted in your dissertation.
+
+4. Practical Implementation and Testing: Your configuration allows for practical tests and implementation scenarios, aligning with the methodology of building a CI/CD pipeline from scratch to gather data on the impact of automation on security and quality, as described in your dissertation.
+
+This setup not only supports the practical aspects of your research but also provides a robust environment for experimenting with and demonstrating the key concepts of your dissertation on automating security and infrastructure within the SDLC.

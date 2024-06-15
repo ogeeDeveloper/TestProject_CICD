@@ -86,6 +86,92 @@ The provided Terraform configuration script is designed to automate the provisio
 
 This Terraform configuration script is a crucial part of the Infrastructure as Code (IaC) approach, ensuring consistent and repeatable setup of infrastructure, which aligns with the goals of the paper to integrate and automate security and infrastructure within the CI/CD pipeline.
 
+**Terraform provisioning the Server within the Pipeline**
+
+```bash
+[Pipeline] { (Infrastructure Provisioning) (hide)
+[Pipeline] dir
+Running in /var/jenkins_home/workspace/TestImplementation/terraform
+[Pipeline] {
+[Pipeline] withCredentials
+Masking supported pattern matches of $DO_TOKEN or $SSH_KEY_ID or $SSH_PRIVATE_KEY_PATH or $SSH_PUBLIC_KEY
+[Pipeline] {
+[Pipeline] script
+[Pipeline] {
+[Pipeline] sh
++ /usr/local/bin/terraform init
+
+[0m[1mInitializing the backend...[0m
+
+[0m[1mInitializing provider plugins...[0m
+- Finding digitalocean/digitalocean versions matching "~> 2.0"...
+- Installing digitalocean/digitalocean v2.39.2...
+- Installed digitalocean/digitalocean v2.39.2 (signed by a HashiCorp partner, key ID [0m[1mF82037E524B9C0E8[0m[0m)
+
+Partner and community providers are signed by their developers.
+If you'd like to know more about provider signing, you can read about it here:
+https://www.terraform.io/docs/cli/plugins/signing.html
+
+Terraform has created a lock file [1m.terraform.lock.hcl[0m to record the provider
+selections it made above. Include this file in your version control repository
+so that Terraform can guarantee to make the same selections by default when
+you run "terraform init" in the future.[0m
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[Pipeline] sh
+Warning: A secret was passed to "sh" using Groovy String interpolation, which is insecure.
+		 Affected argument(s) used the following variable(s): [SSH_KEY_ID, DO_TOKEN, SSH_PUBLIC_KEY, SSH_PRIVATE_KEY_PATH]
+		 See https://jenkins.io/redirect/groovy-string-interpolation for details.
++ /usr/local/bin/terraform plan -var do_token=**** -var ssh_key_id=**** -var ssh_private_key=**** -var ssh_public_key=****
+[0m
+[1mChanges to Outputs:[0m[0m
+  [32m+[0m [0m[1m[0mapp_server_ip[0m[0m = "138.197.12.18"
+
+You can apply this plan to save these new output values to the Terraform
+state, without changing any real infrastructure.
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.
+[Pipeline] sh
+Warning: A secret was passed to "sh" using Groovy String interpolation, which is insecure.
+		 Affected argument(s) used the following variable(s): [SSH_KEY_ID, DO_TOKEN, SSH_PUBLIC_KEY, SSH_PRIVATE_KEY_PATH]
+		 See https://jenkins.io/redirect/groovy-string-interpolation for details.
++ /usr/local/bin/terraform apply -auto-approve -var do_token=**** -var ssh_key_id=**** -var ssh_private_key=**** -var ssh_public_key=****
+[0m
+[1mChanges to Outputs:[0m[0m
+  [32m+[0m [0m[1m[0mapp_server_ip[0m[0m = "138.197.12.18"
+
+You can apply this plan to save these new output values to the Terraform
+state, without changing any real infrastructure.
+[0m[1m[32m
+Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
+[0m[0m[1m[32m
+Outputs:
+
+[0mapp_server_ip = "138.197.12.18"
+[Pipeline] sh
++ /usr/local/bin/terraform output -json
+[Pipeline] readJSON
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // dir
+[Pipeline] }
+[Pipeline]
+```
+
 ## Ansible Playbook
 
 ```hcl
@@ -426,3 +512,6 @@ The provided Jenkins pipeline script defines the steps for building, analyzing, 
 - Deploy Application: Uses Ansible to deploy the application to the provisioned server, using a dynamically created inventory file and passing necessary credentials.
 
 This Jenkins pipeline script demonstrates a comprehensive CI/CD process that includes continuous integration, code quality analysis, infrastructure provisioning, and deployment automation. It aligns with the research goals by showcasing how to automate and integrate various stages of the SDLC, enhancing security, efficiency, and reliability.
+
+The figure below shows the stages within the Jenkins Pipeline
+![alt text](image-28.png)
